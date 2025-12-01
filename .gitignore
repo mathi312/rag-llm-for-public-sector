@@ -1,0 +1,32 @@
+# --- 1. Ignore Everything by Default ---
+*
+
+# --- 2. Whitelist (Allow) Essential Source Code ---
+!app.py
+!chat.py
+!config.py
+!indexing.py
+!loaders.py
+!models.py
+
+# --- 3. Whitelist Configuration & Deployment Files ---
+!requirements.txt
+!Dockerfile
+!docker-compose.yml
+!README.md
+!.gitignore
+!.dockerignore
+
+# --- 4. Whitelist Data Directory Structure (but not content) ---
+!data/
+!data/.gitkeep
+
+# --- 5. Explicitly Ignore Generated Artifacts ---
+faiss_index/
+venv/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.git/
+*.log

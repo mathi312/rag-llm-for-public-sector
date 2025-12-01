@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
+# Ignore local data/index during build copy (they are mounted as volumes at runtime)
+faiss_index/
+data/
