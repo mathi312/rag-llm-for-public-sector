@@ -73,9 +73,16 @@ with st.sidebar:
 
     st.divider()
 
+    @st.dialog("Enter your email address")
+    def email_dialog():
+        st.write("Please provide your email to receive the report.")
+        email = st.text_input("Email")
+        if (st.button("Send email")):
+            print_report(st.session_state.report, email)
+
     if st.button("Print Report"):
         try:
-            print_report(st.session_state.report)
+            email_dialog()
             st.success("Report printed successfully.")
         except EmptyReportError as e:
             st.warning(str(e))

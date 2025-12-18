@@ -1,5 +1,7 @@
 from datetime import datetime
 from fpdf import FPDF
+import smtplib
+from email.message import EmailMessage
 
 class PrinterBrokenError(Exception):
     """Raised when the printer is broken"""
@@ -57,6 +59,24 @@ class Report:
 
         # Return PDF as bytes, to avoid temp files
         return bytes(pdf.output())
+    
+    def send_via_email(self, from_email: str, to_email: str):
+        pdf = self.generate_pdf()
+
+        # Create email
+        msg = EmailMessage()
+        msg['Subject'] = "LLM Chat Report"
+        msg['From'] = from_email
+        msg['To'] = to_email
+        msg.set_content("This is an automated email. LLM Chat Report can be found in the attachment.")
+        msg.add_attachment(pdf, maintype='application', subtype='pdf', filename='report.pdf')
+
+        # Send email via local SMTP server (via mailhog)
+        server = smtplib.SMTP("mailhog", 1025)
+        server.set_debuglevel(1)
+        server.send_message(msg)
+        server.quit()
+
 
     def print(self, is_printer_broken: bool):
         pdf = self.generate_pdf()

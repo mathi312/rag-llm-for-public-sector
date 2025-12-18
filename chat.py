@@ -51,11 +51,13 @@ class EmptyReportError(Exception):
     pass
 
 
-def print_report(report: Report):
+def print_report(report: Report, to_email: str):
     if report is None:
         raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
     
     try:
         report.print(is_printer_broken = True)
     except PrinterBrokenError as e:
+        report.send_via_email('report@ragllm.uni-ulm.de', to_email)
         raise(e)
+    

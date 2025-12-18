@@ -22,6 +22,17 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: rag-app
+    # Development settings with file sync
+    develop:
+      watch:
+        # Sync all Python files - Streamlit auto-reloads
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - .git
+            - __pycache__
+            - .pytest_cache
     ports:
       - "8501:8501"
     volumes:
@@ -34,6 +45,14 @@ services:
     depends_on:
       - ollama
     restart: unless-stopped
+
+  # Mailhog service for capturing outgoing emails
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   ollama_data:
