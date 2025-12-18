@@ -8,6 +8,8 @@
 !indexing.py
 !loaders.py
 !models.py
+!extensions/**
+!extensions/
 
 !extensions/
 !extensions/**
