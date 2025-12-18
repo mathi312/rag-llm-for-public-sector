@@ -10,13 +10,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
+from extensions.report_generator import Report, PrinterBrokenError
+
 SYSTEM_PROMPT = (
     "You are an assistant for question-answering tasks. "
     "Use the following pieces of retrieved context to answer the question. "
     "If the answer is not in the context, say that you don't know. "
     "Keep the answer concise.\n\n{context}"
 )
-
 
 def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
     """Construct a retrieval-augmented generation chain."""
@@ -34,7 +35,27 @@ def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
     return rag_chain
 
 
-def answer_question(rag_chain, question: str) -> str:
+def answer_question(rag_chain, question: str, report: Report) -> str:
     """Execute the RAG chain with a user question and extract the answer."""
     result = rag_chain.invoke({"input": question})
-    return result["answer"]
+    answer = result["answer"]
+
+    if report is not None:
+        report.add_entry(question, answer)
+
+    return answer
+
+
+class EmptyReportError(Exception):
+    """Raised when the report is empty"""
+    pass
+
+
+def print_report(report: Report):
+    if report is None:
+        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
+    
+    try:
+        report.print(is_printer_broken = True)
+    except PrinterBrokenError as e:
+        raise(e)

@@ -11,7 +11,8 @@ from pathlib import Path
 from loaders import load_files_to_documents, load_directory_documents, split_documents
 from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
-from chat import create_rag_chain, answer_question
+from chat import create_rag_chain, answer_question, print_report, EmptyReportError
+from extensions.report_generator import Report, PrinterBrokenError
 
 # Define the static data directory (mounted via Docker)
 DATA_DIR = Path(__file__).parent / "data"
@@ -70,11 +71,26 @@ with st.sidebar:
 
     process_btn = st.button("Build / Update Index")
 
+    st.divider()
+
+    if st.button("Print Report"):
+        try:
+            print_report(st.session_state.report)
+            st.success("Report printed successfully.")
+        except EmptyReportError as e:
+            st.warning(str(e))
+        except PrinterBrokenError as e:
+            st.error(str(e))
+        except Exception as e:
+            st.exception(e)
+
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "report" not in st.session_state:
+    st.session_state.report = None
 
 # --- INITIALIZATION CHECK ---
 if provider == "OpenAI" and not api_key:
@@ -142,11 +158,16 @@ if st.session_state.vector_store:
 
         try:
             llm = get_llm(provider, selected_model, api_key=api_key)
+
+            if st.session_state.report is None:
+                llm_name = getattr(llm, "model_name", llm.__class__.__name__)
+                st.session_state.report = Report(llm_name)
+
             chain = create_rag_chain(st.session_state.vector_store, llm)
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    ans = answer_question(chain, prompt)
+                    ans = answer_question(chain, prompt, st.session_state.report)
                     st.markdown(ans)
             st.session_state.messages.append({"role": "assistant", "content": ans})
         except Exception as e:
