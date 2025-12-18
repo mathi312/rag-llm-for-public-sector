@@ -9,6 +9,9 @@
 !loaders.py
 !models.py
 
+!extensions/
+!extensions/**
+
 # --- 3. Whitelist Configuration & Deployment Files ---
 !requirements.txt
 !Dockerfile

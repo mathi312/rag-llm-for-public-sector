@@ -10,7 +10,7 @@ from typing import List
 from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from langchain_core.documents import Document
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP
