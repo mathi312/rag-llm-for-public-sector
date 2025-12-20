@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
-from extensions.report_generator import Report, PrinterBrokenError
+from extensions.report_generator import Report
 
 SYSTEM_PROMPT = (
     "You are an assistant for question-answering tasks. "
@@ -44,20 +44,4 @@ def answer_question(rag_chain, question: str, report: Report) -> str:
         report.add_entry(question, answer)
 
     return answer
-
-
-class EmptyReportError(Exception):
-    """Raised when the report is empty"""
-    pass
-
-
-def print_report(report: Report, to_email: str):
-    if report is None:
-        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
-    
-    try:
-        report.print(is_printer_broken = True)
-    except PrinterBrokenError as e:
-        report.send_via_email('report@ragllm.uni-ulm.de', to_email)
-        raise(e)
-    
+  

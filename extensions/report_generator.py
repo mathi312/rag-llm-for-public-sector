@@ -8,9 +8,19 @@ class PrinterBrokenError(Exception):
     pass
 
 
+class EmptyReportError(Exception):
+    """Raised when the report is empty"""
+    pass
+
+
+class EmptyEmailAddressError(Exception):
+    """Raised when the passed email address is empty"""
+    pass
+
+
 class Report:
-    llm: str = None
-    date: str = None
+    llm: str | None = None
+    date: str | None = None
     chat_map: dict[str, str] = {}
 
     def __init__(self, llm: str):
@@ -20,7 +30,7 @@ class Report:
     def generate_date(self):
         self.date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
 
-    def get_date(self) -> str:
+    def get_date(self) -> str | None:
         if self.date == None:
             self.generate_date()
         return self.date
@@ -77,19 +87,48 @@ class Report:
         server.send_message(msg)
         server.quit()
 
-
     def print(self, is_printer_broken: bool):
-        pdf = self.generate_pdf()
-
         if is_printer_broken:
-            filename = "llm_chat_report.pdf"
-
-            with open(filename, "wb") as f:
-                f.write(pdf)
-
             raise PrinterBrokenError(
-                f"Printer broken PDF saved locally as '{filename}'"
+                "Printer currently not available. Alternatively you can send the report per mail"
             )
 
 
+def print_report(report: Report):
+    """
+    Prints the given report.
 
+    Args:
+        report (Report): The report to be printed.
+
+    Raises:
+        EmptyReportError: If the report is None or contains no content.
+        PrinterBrokenError: If the printer fails during printing.
+    """
+    if report is None:
+        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
+    
+    try:
+        report.print(is_printer_broken = True)
+    except PrinterBrokenError as e:
+        raise(e)
+
+
+def send_report_via_email(report: Report, to_email: str):
+    """
+    Send the given report via email.
+
+    Args:
+        report (Report): The report to be sent.
+        to_email (str): Recipient email address.
+
+    Raises:
+        EmptyReportError: If the report is None or contains no content.
+        EmptyEmailAddressError: If the recipient email address is empty.
+    """
+    if report is None:
+        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
+    if to_email is "":
+        raise EmptyEmailAddressError("The email address is empty. Please enter a email address!")
+    
+    report.send_via_email('report@ragllm.uni-ulm.de', to_email)
