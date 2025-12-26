@@ -37,4 +37,8 @@ def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
 def answer_question(rag_chain, question: str) -> str:
     """Execute the RAG chain with a user question and extract the answer."""
     result = rag_chain.invoke({"input": question})
-    return result["answer"]
+
+    answer = result["answer"]
+    sources = result["context"]
+
+    return answer, sources
