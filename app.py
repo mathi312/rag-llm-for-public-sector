@@ -13,6 +13,10 @@ from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
 from chat import create_rag_chain, answer_question
 
+import time
+
+from extensions.idprovider import *
+
 # Define the static data directory (mounted via Docker)
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -61,7 +65,41 @@ with st.sidebar:
     )
 
     st.divider()
-    
+
+    # Citizen ID Upload Section
+    st.header("3. Citizen ID Upload")
+
+    citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
+
+    upload_citizen_file = st.button("Upload Citizen ID Document")
+
+    if upload_citizen_file:
+        # Mappe den gewählten Ausweis auf die Mock-Daten
+        def get_selected_id_data(selection: str) -> dict:
+            if selection == "ID Card":
+                return id_card
+            if selection == "Passport":
+                return passport
+            if selection == "Residence Permit":
+                return residence_permit
+            return {}
+
+        st.session_state["id_document"] = {
+            "type": citizen_id,
+            "data": get_selected_id_data(citizen_id)
+        }
+        st.session_state["id_uploaded"] = True
+
+        # Show success message for 5 seconds
+        msg = st.empty()
+        msg.success(f"{citizen_id} document uploaded successfully!")
+        time.sleep(2)
+        msg.empty()
+
+        st.text(process_id_document())
+
+    st.divider()
+
     build_mode = st.radio(
         "Index mode",
         ["Use existing index", "Rebuild index"],
@@ -75,6 +113,10 @@ if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "id_uploaded" not in st.session_state:
+    st.session_state.id_uploaded = False
+if "id_document" not in st.session_state:
+    st.session_state.id_document = None
 
 # --- INITIALIZATION CHECK ---
 if provider == "OpenAI" and not api_key:
@@ -146,7 +188,7 @@ if st.session_state.vector_store:
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    ans = answer_question(chain, prompt)
+                    ans = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False))
                     st.markdown(ans)
             st.session_state.messages.append({"role": "assistant", "content": ans})
         except Exception as e:
