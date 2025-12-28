@@ -52,7 +52,7 @@ def open_login_dialog():
     def login():
         st.write("Bitte melden Sie sich an:")
         with st.form('login_form'):
-            email = st.text_input("E-Mail", type="email")
+            email = st.text_input("E-Mail")
             password = st.text_input("Passwort", type="password")
             submit = st.form_submit_button("Login")
 
