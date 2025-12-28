@@ -11,6 +11,9 @@
 !extensions/
 !extensions/**
 
+!pocketbase/
+!pocketbase/**
+
 # --- 3. Whitelist Configuration & Deployment Files ---
 !requirements.txt
 !Dockerfile

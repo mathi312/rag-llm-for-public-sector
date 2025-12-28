@@ -146,4 +146,25 @@ Open your web browser and navigate to:
     ├── requirements.txt    # Python Dependencies
     ├── Dockerfile          # App Container Definition
     ├── docker-compose.yml  # Service Orchestration
+    ├── extensions/         # Folder for code extension (Feature Implementation)
     └── data/               # Folder for static documents (User created)
+
+---
+
+## 7. [Pocketbase](https://pocketbase.io/)
+
+Access Pocketbase under http://127.0.0.1:8080/_/
+
+> **_NOTE_**: Use these credentials to log into the pocketbase management interface
+>
+> **username:** admin@rag-llm.de
+>
+> **password:** m1UU!82ax7e
+>
+> These credentials might not exist in your environment, in that case:
+>
+> Use this command to create a new super user account
+>
+> `docker exec -it pocketbase /pb/pocketbase superuser create EMAIL_ADRESS PASSWORD`
+>
+> Docker Compose (pocketbase service) must be running in the background for this to work.
