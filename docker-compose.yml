@@ -42,8 +42,22 @@ services:
       - ./data:/app/data
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
+      - POCKETBASE_URL=http://pocketbase:8080
     depends_on:
       - ollama
+      - pocketbase
+    restart: unless-stopped
+
+  # PocketBase service (The user and data management backend)
+  pocketbase:
+    build:
+      context: ./pocketbase # Dockerfile is in the pocketbase directory
+      dockerfile: Dockerfile # Specify the Dockerfile
+    container_name: pocketbase
+    ports:
+      - "8080:8080"
+    volumes:
+        - "./pocketbase-data:/pb/pb_data"  # Attaches pb_data to a volume named 'pocketbase-data'
     restart: unless-stopped
 
 volumes:
