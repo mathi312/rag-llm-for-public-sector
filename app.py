@@ -149,6 +149,8 @@ if "id_document" not in st.session_state:
     st.session_state.id_document = None
 if "report" not in st.session_state:
     st.session_state.report = None
+if "active_source" not in st.session_state:
+    st.session_state.active_source = None
 
 # --- INITIALIZATION CHECK ---
 if provider == "OpenAI" and not api_key:
@@ -168,6 +170,25 @@ if st.session_state.vector_store is None:
     if vs:
         st.session_state.vector_store = vs
         st.sidebar.success("Loaded existing index.")
+
+# --- Dialog to display the source ---
+@st.dialog("Source Content")
+def show_source_details(content, title):
+    st.write(f"### {title}")
+    st.write("---")
+    st.write(content)
+    if st.button("Close"):
+        st.rerun()
+
+# --- Check for active source ---
+if st.session_state.active_source:
+    source_data = st.session_state.active_source
+    st.session_state.active_source = None 
+    show_source_details(source_data["content"], source_data["title"])
+
+# --- Helper to show source content
+def handle_source_click(content, title):
+    st.session_state.active_source = {"content": content, "title": title}
 
 # --- BUILD LOGIC ---
 if process_btn:
@@ -206,9 +227,20 @@ if process_btn:
 # --- CHAT UI ---
 if st.session_state.vector_store:
     st.divider()
-    for m in st.session_state.messages:
+    for i, m in enumerate(st.session_state.messages):
         with st.chat_message(m["role"]):
             st.markdown(m["content"])
+
+            if m["role"] == "assistant" and "sources" in m and m["sources"]:
+                srcs = m["sources"]
+                cols = st.columns(len(srcs))
+                for j, doc in enumerate(srcs):
+                    source_name = doc.metadata.get("source", "Doc")
+                    page = doc.metadata.get("page", "N/A")
+                    title = f"{source_name} (P. {page})"
+                    
+                    with cols[j]:
+                        st.button(title, key=f"btn_{i}_{j}", on_click=handle_source_click, args=(doc.page_content, title),use_container_width=True)
 
     if prompt := st.chat_input("Ask a question..."):
         st.chat_message("user").markdown(prompt)
@@ -225,9 +257,21 @@ if st.session_state.vector_store:
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    ans = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False), report=st.session_state.report)
+                    ans, sources = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False), report=st.session_state.report)
                     st.markdown(ans)
-            st.session_state.messages.append({"role": "assistant", "content": ans})
+
+                    if sources:
+                        cols = st.columns(len(sources))
+                        for k, doc in enumerate(sources):
+                            title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
+                            with cols[k]:
+                                st.button(title, key=f"btn_new_{k}", on_click=handle_source_click, args=(doc.page_content, title), use_container_width=True)
+
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": ans, 
+                "sources": sources
+            })
         except Exception as e:
             st.error(f"An error occurred: {e}")
 else:

@@ -56,6 +56,7 @@ def answer_question(rag_chain, question: str, id_document: dict | None = None, i
 
     result = rag_chain.invoke({"input": question})
     answer = result["answer"]
+    sources = result["context"]
 
     if needs_id_prompt(question, id_uploaded):
         answer += (
@@ -67,4 +68,4 @@ def answer_question(rag_chain, question: str, id_document: dict | None = None, i
     if report is not None:
         report.add_entry(question, answer)
 
-    return answer
+    return answer, sources
