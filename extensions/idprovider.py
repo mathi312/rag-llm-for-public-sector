@@ -1,3 +1,7 @@
+"""
+This module contains sample data for different types of identification documents.
+Each document is represented as an object with relevant fields.
+"""
 
 # id_card
 id_card = {

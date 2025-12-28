@@ -16,6 +16,7 @@ from chat import create_rag_chain, answer_question
 import time
 
 from extensions.idprovider import *
+from extensions.pocketbase import *
 
 # Define the static data directory (mounted via Docker)
 DATA_DIR = Path(__file__).parent / "data"
@@ -25,6 +26,11 @@ st.title("🤖 Digital Assistant - RAG-LLM (Hybrid)")
 
 # --- SIDEBAR UI ---
 with st.sidebar:
+    st.header("Current User")
+    is_logged_in()
+
+    st.divider()
+                
     st.header("1. AI Provider Configuration")
     
     provider = st.radio("Select Provider", ["Local (Ollama)", "OpenAI"], index=0)
