@@ -1,7 +1,7 @@
 import streamlit as st
 import re
 
-st.set_page_config(page_title="Registrierung", page_icon="📝", layout="centered")
+st.set_page_config(page_title="Registrierung", layout="centered")
 
 st.title("Registrieren")
 st.caption("Demo-Registrierung (ohne Persistenz)")

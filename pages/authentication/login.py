@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="Login", page_icon=":lock:", layout="centered")
+st.set_page_config(page_title="Login", layout="centered")
 
 
 def validate_login(email: str, password: str) -> tuple[bool, str | None]:
