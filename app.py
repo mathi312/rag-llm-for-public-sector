@@ -138,7 +138,6 @@ with st.sidebar:
         except Exception as e:
             st.exception(e)
 
-
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
