@@ -10,7 +10,8 @@
 !models.py
 !extensions/
 !extensions/**
-
+!pages/
+!pages/**
 !pocketbase/
 !pocketbase/**
 
