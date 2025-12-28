@@ -10,6 +10,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
+from extensions.report_generator import Report
+
 SYSTEM_PROMPT = (
     "You are an assistant for question-answering tasks. "
     "Use the following pieces of retrieved context to answer the question. "
@@ -43,7 +45,7 @@ def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
     return rag_chain
 
 
-def answer_question(rag_chain, question: str, id_document: dict | None = None, id_uploaded: bool = False) -> str:
+def answer_question(rag_chain, question: str, id_document: dict | None = None, id_uploaded: bool = False, report: Report | None = None) -> str:
     """Execute the RAG chain with a user question and extract the answer."""
     if id_uploaded and id_document:
         question += (
@@ -51,7 +53,6 @@ def answer_question(rag_chain, question: str, id_document: dict | None = None, i
             f"Type: {id_document.get('type')}\n"
             f"Data: {id_document.get('data')}"
         )
-
 
     result = rag_chain.invoke({"input": question})
     answer = result["answer"]
@@ -62,5 +63,8 @@ def answer_question(rag_chain, question: str, id_document: dict | None = None, i
             "Bitte laden Sie Ihren Ausweis hoch, in dem Sie auf die Schaltfläche \"Ausweis hochladen\" klicken."
             f"{'' if id_uploaded else ' (Derzeit kein Ausweis hochgeladen)'}"
         )
+
+    if report is not None:
+        report.add_entry(question, answer)
 
     return answer

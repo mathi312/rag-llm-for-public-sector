@@ -12,6 +12,7 @@ from loaders import load_files_to_documents, load_directory_documents, split_doc
 from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
 from chat import create_rag_chain, answer_question
+from extensions.report_generator import *
 
 import time
 
@@ -108,6 +109,35 @@ with st.sidebar:
 
     process_btn = st.button("Build / Update Index")
 
+    st.divider()
+
+    @st.dialog("Enter your email address")
+    def email_dialog(exception: str):
+        st.error(exception)
+        st.write("Please provide your email to receive the report.")
+        email = st.text_input("Email")
+
+        if st.button("Send email"):
+            try:
+                send_report_via_email(st.session_state.report, email)
+                st.success("Email sent successfully.")
+            except (EmptyReportError, EmptyEmailAddressError) as e:
+                st.warning(str(e))
+            except Exception as e:
+                st.exception(e)
+
+    if st.button("Print Report"):
+        try:
+            print_report(st.session_state.report)
+
+            st.success("Report printed successfully.")
+        except EmptyReportError as e:
+            st.warning(str(e))
+        except PrinterBrokenError as e:
+            email_dialog(str(e))
+        except Exception as e:
+            st.exception(e)
+
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
@@ -117,6 +147,8 @@ if "id_uploaded" not in st.session_state:
     st.session_state.id_uploaded = False
 if "id_document" not in st.session_state:
     st.session_state.id_document = None
+if "report" not in st.session_state:
+    st.session_state.report = None
 
 # --- INITIALIZATION CHECK ---
 if provider == "OpenAI" and not api_key:
@@ -184,11 +216,16 @@ if st.session_state.vector_store:
 
         try:
             llm = get_llm(provider, selected_model, api_key=api_key)
+
+            if st.session_state.report is None:
+                llm_name = getattr(llm, "model_name", llm.__class__.__name__)
+                st.session_state.report = Report(llm_name)
+
             chain = create_rag_chain(st.session_state.vector_store, llm)
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    ans = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False))
+                    ans = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False), report=st.session_state.report)
                     st.markdown(ans)
             st.session_state.messages.append({"role": "assistant", "content": ans})
         except Exception as e:
