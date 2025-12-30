@@ -2,7 +2,7 @@
 
 This module defines the RAG pipeline, including the system prompt template
 and answer generation logic.
-""" 
+"""
 
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -19,33 +19,44 @@ SYSTEM_PROMPT = (
     "Keep the answer concise.\n\n{context}"
 )
 
-DOCUMENT_KEYWORDS = ["führungszeugnis", "dokument", "bescheinigung", "auszug", "urkunde"]
+DOCUMENT_KEYWORDS = [
+    "führungszeugnis",
+    "dokument",
+    "bescheinigung",
+    "auszug",
+    "urkunde",
+]
+
 
 def needs_id_prompt(question: str, id_uploaded: bool) -> bool:
     """Detect if the user is requesting an official document and should show ID prompt."""
     q = question.lower()
     return any(keyword in q for keyword in DOCUMENT_KEYWORDS) and not id_uploaded
 
+
 def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
     """Construct a retrieval-augmented generation chain."""
     prompt_template = ChatPromptTemplate.from_messages(
-        [
-            ("system", SYSTEM_PROMPT),
-            ("human", "{input}")
-        ]
+        [("system", SYSTEM_PROMPT), ("human", "{input}")]
     )
 
     qa_chain = create_stuff_documents_chain(llm, prompt_template)
     retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={"k": 6, "score_threshold": 0.3}
+        search_kwargs={"k": 6, "score_threshold": 0.3},
     )
     rag_chain = create_retrieval_chain(retriever, qa_chain)
-    
+
     return rag_chain
 
 
-def answer_question(rag_chain, question: str, id_document: dict | None = None, id_uploaded: bool = False, report: Report | None = None) -> str:
+def answer_question(
+    rag_chain,
+    question: str,
+    id_document: dict | None = None,
+    id_uploaded: bool = False,
+    report: Report | None = None,
+) -> str:
     """Execute the RAG chain with a user question and extract the answer."""
     if id_uploaded and id_document:
         question += (
@@ -61,7 +72,7 @@ def answer_question(rag_chain, question: str, id_document: dict | None = None, i
     if needs_id_prompt(question, id_uploaded):
         answer += (
             "\n\nZur weiteren Bearbeitung benötige ich eine Ausweisbestätigung. "
-            "Bitte laden Sie Ihren Ausweis hoch, in dem Sie auf die Schaltfläche \"Ausweis hochladen\" klicken."
+            'Bitte laden Sie Ihren Ausweis hoch, in dem Sie auf die Schaltfläche "Ausweis hochladen" klicken.'
             f"{'' if id_uploaded else ' (Derzeit kein Ausweis hochgeladen)'}"
         )
 

@@ -11,7 +11,7 @@ id_card = {
     "id_card_birthdate": "10.02.2005",
     "id_card_birth_place": "Musterstadt",
     "id_card_nationality": "Musterland",
-    "id_card_address": "Musterstrasse 1, 12345 Musterstadt"
+    "id_card_address": "Musterstrasse 1, 12345 Musterstadt",
 }
 
 # passport
@@ -22,7 +22,7 @@ passport = {
     "passport_birthdate": "10.02.2005",
     "passport_birth_place": "Musterstadt",
     "passport_nationality": "Musterland",
-    "passport_address": "Musterstrasse 1, 12345 Musterstadt"
+    "passport_address": "Musterstrasse 1, 12345 Musterstadt",
 }
 
 # residence_permit
@@ -33,7 +33,7 @@ residence_permit = {
     "residence_permit_birthdate": "10.02.2005",
     "residence_permit_birth_place": "Musterstadt",
     "residence_permit_nationality": "Musterland",
-    "residence_permit_address": "Musterstrasse 1, 12345 Musterstadt"
+    "residence_permit_address": "Musterstrasse 1, 12345 Musterstadt",
 }
 
 

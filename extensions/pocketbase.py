@@ -6,6 +6,7 @@ from extensions.pocketbase_messages import PBError, PBInfo
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
 
+
 def restore_session() -> None:
     """Restore the user session from the auth store."""
     auth_data = st.session_state.get("pb_auth")
@@ -26,32 +27,34 @@ def restore_session() -> None:
 def authenticate_user(email: str, password: str) -> dict | str:
     """Authenticate a user with PocketBase."""
     try:
-        auth_data = client.collection('users').auth_with_password(email, password)
+        auth_data = client.collection("users").auth_with_password(email, password)
         return auth_data
     except Exception as e:
         return PBError.AUTHENTICATION_FAILED.name
-    
+
+
 def logout_user() -> None:
     """Logout the current authenticated user."""
     client.auth_store.clear()
     st.session_state.pop("pb_auth", None)
 
+
 def is_authenticated() -> bool:
     """Check if a user is authenticated."""
     return bool(client.auth_store.token)
+
 
 def show_logged_in_status() -> None:
     """Display the authenticated status of the user."""
     is_logged_in = bool(client.auth_store.token)
     if is_logged_in and client.auth_store.model:
         # Try to get the user's name from the model
-        name = (
-            getattr(client.auth_store.model, "name", None)
-        )
+        name = getattr(client.auth_store.model, "name", None)
         st.success(f"{PBInfo.LOGGED_IN.value} {name or PBInfo.UNKNOWN_USER.value}")
         st.text(f"Admin: {'Yes' if user_is_admin() else 'No'}")
     else:
         st.warning(PBInfo.NOT_AUTHENTICATED.value)
+
 
 def user_is_admin() -> bool:
     """Check if the authenticated user is an admin."""
@@ -59,12 +62,8 @@ def user_is_admin() -> bool:
 
     if not model:
         return False
-    
+
     if hasattr(model, "get"):
-        return bool(
-            model.get("admin")
-        )
-    
-    return bool(
-        getattr(model, "admin", False)
-    )
+        return bool(model.get("admin"))
+
+    return bool(getattr(model, "admin", False))
