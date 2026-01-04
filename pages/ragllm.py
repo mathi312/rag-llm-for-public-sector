@@ -20,7 +20,7 @@ from extensions.idprovider import *
 from extensions.pocketbase import *
 
 # Define the static data directory (mounted via Docker)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 
 st.set_page_config(page_title="Digital Assistant - RAG-LLM", layout="wide")
 st.title("🤖 Digital Assistant - RAG-LLM (Hybrid)")
