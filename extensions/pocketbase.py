@@ -2,6 +2,7 @@ import os
 import streamlit as st
 from pocketbase import PocketBase
 from extensions.pocketbase_messages import PBError, PBInfo
+from extensions.user import User
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
@@ -37,6 +38,7 @@ def logout_user() -> None:
     """Logout the current authenticated user."""
     client.auth_store.clear()
     st.session_state.pop("pb_auth", None)
+    st.session_state.pop("user", None)
 
 
 def is_authenticated() -> bool:
@@ -67,3 +69,23 @@ def user_is_admin() -> bool:
         return bool(model.get("admin"))
 
     return bool(getattr(model, "admin", False))
+
+
+def get_user_from_auth_store() -> User | None:
+    """Restore the user from the auth store."""
+    try:
+        if not client.auth_store.token:
+            return None
+
+        if not client.auth_store.model:
+            return None
+
+        user = User.from_pb_record(client.auth_store.model)
+        return user
+
+    except AttributeError as e:
+        print(f"Attribute error: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
