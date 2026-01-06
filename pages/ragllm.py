@@ -8,7 +8,7 @@ natural language queries.
 import streamlit as st
 from pathlib import Path
 
-from loaders import load_files_to_documents, load_directory_documents, split_documents
+from loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
 from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
 from chat import create_rag_chain, answer_question
@@ -36,8 +36,33 @@ uploaded_files = None
 static_files = []
 build_mode = "Use existing index"
 process_btn = False
-# -- --
 
+# --- SESSION STATE ---
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "id_uploaded" not in st.session_state:
+    st.session_state.id_uploaded = False
+if "id_document" not in st.session_state:
+    st.session_state.id_document = None
+if "report" not in st.session_state:
+    st.session_state.report = None
+if "active_source" not in st.session_state:
+    st.session_state.active_source = None
+if "user" not in st.session_state:
+    st.session_state.user = get_user_from_auth_store()
+if "urls" not in st.session_state:
+    st.session_state.urls = []
+if "url_input" not in st.session_state:
+    st.session_state.url_input = ""
+
+# callback to add url to the urls in the sidebar
+def add_url():
+    url = st.session_state.url_input.strip()
+    if url and url not in st.session_state.urls:
+        st.session_state.urls.append(url)
+    st.session_state.url_input = ""
 
 # --- SIDEBAR UI ---
 with st.sidebar:
@@ -109,6 +134,19 @@ with st.sidebar:
                 accept_multiple_files=True,
             )
 
+            # Enter a URL from which to load the html content
+            st.text_input(
+                "Enter URL from which to load content:",
+                key="url_input",
+                on_change=add_url,
+            )
+
+            # Display all entered URLs
+            if st.session_state.urls:
+                st.markdown("Added URLs")
+                for u in st.session_state.urls:
+                    st.write(u)
+
             st.divider()
 
             build_mode = st.radio(
@@ -157,21 +195,6 @@ with st.sidebar:
 
         print_report_btn = st.button("Print Report")
 
-# --- SESSION STATE ---
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = None
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "id_uploaded" not in st.session_state:
-    st.session_state.id_uploaded = False
-if "id_document" not in st.session_state:
-    st.session_state.id_document = None
-if "report" not in st.session_state:
-    st.session_state.report = None
-if "active_source" not in st.session_state:
-    st.session_state.active_source = None
-if "user" not in st.session_state:
-    st.session_state.user = get_user_from_auth_store()
 
 # Dialog for entering a email address
 @st.dialog("Enter your email address")
@@ -261,6 +284,12 @@ if process_btn:
             status_msg.info("Loading uploaded files...")
             upload_docs = load_files_to_documents(uploaded_files)
             all_docs.extend(upload_docs)
+        
+        # Load Html content from urls
+        if st.session_state.urls:
+            status_msg.info("Loading content form URLs...")
+            url_docs = load_urls_as_documents(st.session_state.urls)
+            all_docs.extend(url_docs)
 
         if not all_docs:
             st.sidebar.warning("No documents found.")

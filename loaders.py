@@ -6,10 +6,11 @@ user uploads and a static local directory.
 
 import os
 import tempfile
+import re
 from typing import List
 from pathlib import Path
 
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from langchain_core.documents import Document
 
@@ -47,6 +48,37 @@ def load_files_to_documents(uploaded_files) -> List[Document]:
 
     return documents
 
+def load_urls_as_documents(urls) -> List[Document]:
+    """Load the content of the given urls.
+
+    Args:
+        urls: List of urls.
+
+    Returns:
+        List[Document]: List of loaded documents from the urls.
+    """
+    documents: List[Document] = []
+
+    for url in urls:
+        try:
+            loader = WebBaseLoader(
+                url, 
+                bs_kwargs=dict(
+                    parse_only=None
+                )
+            )
+            docs = loader.load()
+
+            # normalize page content
+            for doc in docs:
+                doc.page_content = normalize_web_text(doc.page_content)
+
+            documents.extend(docs)
+        except Exception as e:
+            print(f"Error while loading {url}: {e}")
+            continue
+
+    return documents
 
 def load_directory_documents(data_dir: Path) -> List[Document]:
     """Load all PDF/DOCX files from a specific directory path.
@@ -89,3 +121,15 @@ def split_documents(documents: List[Document]) -> List[Document]:
         chunk_overlap=CHUNK_OVERLAP
     )
     return splitter.split_documents(documents)
+
+def normalize_web_text(text: str) -> str:
+    """Normalize the text of a webpage."""
+    # Remove excessive newlines
+    text = re.sub(r"\n{2,}", "\n", text)
+    # Remove excessive spaces
+    text = re.sub(r"[ \t]{2,}", " ", text)
+
+    # Fix broken punctuation spacing
+    text = re.sub(r"\s+\.", ".", text)
+
+    return text.strip()
