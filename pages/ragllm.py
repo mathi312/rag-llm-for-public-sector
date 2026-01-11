@@ -77,33 +77,31 @@ with st.sidebar:
     st.header("3. Citizen ID Upload")
 
     citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
+    id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"])
 
     upload_citizen_file = st.button("Upload Citizen ID Document")
 
     if upload_citizen_file:
-        # Mappe den gewählten Ausweis auf die Mock-Daten
-        def get_selected_id_data(selection: str) -> dict:
-            if selection == "ID Card":
-                return id_card
-            if selection == "Passport":
-                return passport
-            if selection == "Residence Permit":
-                return residence_permit
-            return {}
+            if not id_image:
+                st.warning("Bitte zuerst ein Ausweisbild hochladen.")
+            else:
+                try:
+                    extracted_data = process_id_document(id_image.read(), citizen_id)
 
-        st.session_state["id_document"] = {
-            "type": citizen_id,
-            "data": get_selected_id_data(citizen_id)
-        }
-        st.session_state["id_uploaded"] = True
+                    st.session_state["id_document"] = {
+                        "type": citizen_id,
+                        "data": extracted_data,
+                    }
+                    st.session_state["id_uploaded"] = True
 
-        # Show success message for 5 seconds
-        msg = st.empty()
-        msg.success(f"{citizen_id} document uploaded successfully!")
-        time.sleep(2)
-        msg.empty()
+                    msg = st.empty()
+                    msg.success(f"{citizen_id} document uploaded successfully!")
+                    time.sleep(2)
+                    msg.empty()
 
-        st.text(process_id_document())
+                    st.text("OCR mapping completed.")
+                except Exception as exc:
+                    st.error(f"OCR processing failed: {exc}")
 
     st.divider()
 
