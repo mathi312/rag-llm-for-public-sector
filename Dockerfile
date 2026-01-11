@@ -8,9 +8,15 @@ WORKDIR /app
 
 # Install system dependencies
 # curl is needed for healthchecks
+# tesseract-ocr and language packs for English and German are installed for OCR (Optical Character Recognition) functionality
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    tesseract-ocr \
+    tesseract-ocr-deu \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

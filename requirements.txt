@@ -12,3 +12,7 @@ docx2txt
 tiktoken
 fpdf2>=2.8.1
 pocketbase
+pytesseract
+easyocr
+torch
+pytest
