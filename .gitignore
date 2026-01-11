@@ -14,6 +14,8 @@
 !pages/**
 !pocketbase/
 !pocketbase/**
+!tests/
+!tests/**
 
 # --- 3. Whitelist Configuration & Deployment Files ---
 !requirements.txt
@@ -27,7 +29,10 @@
 !data/
 !data/.gitkeep
 
-# --- 5. Explicitly Ignore Generated Artifacts ---
+# --- 5. Whitelist CI/CD Pipeline ---
+!.gitlab-ci.yml
+
+# --- 6. Explicitly Ignore Generated Artifacts ---
 faiss_index/
 venv/
 __pycache__/
