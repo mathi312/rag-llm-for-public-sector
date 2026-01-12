@@ -1,6 +1,7 @@
 """
 This module contains sample data for different types of identification documents.
 Each document is represented as an object with relevant fields.
+It includes functions to map OCR-extracted text lines to structured ID fields.
 """
 
 import io
@@ -81,7 +82,7 @@ def _preprocess_image_for_ocr(image: Image.Image, max_dim: int = 2000) -> Image.
     w, h = image.size # Get original dimensions
     scale = min(1.0, max_dim / max(w, h)) # Calculate scaling factor
     if scale < 1.0:
-        image = image.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+        image = image.resize((int(w * scale), int(h * scale)), Image.LANCZOS) # Resize image if needed
     return image
 
 
@@ -97,7 +98,7 @@ def _run_ocr_easyocr(image_bytes: bytes) -> str:
 def process_id_document(file_bytes: bytes, id_type: str) -> Dict[str, str]:
     """Processes an ID document image and extracts relevant fields using OCR."""
     raw_text = _run_ocr_easyocr(file_bytes)
-    lines = [ln for ln in raw_text.splitlines() if ln.strip()]
+    lines = [ln for ln in raw_text.splitlines() if ln.strip()] # Filter out empty lines
     result = map_id_fields(id_type, lines)
     return {
         **result,

@@ -1,7 +1,8 @@
 import pytest
 from extensions.idprovider import map_id_fields
 
-def test_map_id_fields_happy_path():
+def test_map_id_fields_ocr_extraction():
+    """Test mapping of ID fields from OCR lines for a German demo ID card."""
     lines = [
         "BUNDESREPUBLIK DEUTSCHLAND",
         "LZ6311T 4 7",
@@ -43,5 +44,6 @@ def test_map_id_fields_happy_path():
     assert result["id_card_date_of_expiry"] == "01.05.2034"
 
 def test_map_id_fields_not_enough_lines():
+    """Test that an IndexError is raised when there are not enough lines."""
     with pytest.raises(IndexError):
         map_id_fields("ID Card", ["only", "two"])

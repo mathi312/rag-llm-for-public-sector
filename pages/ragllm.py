@@ -88,13 +88,13 @@ with st.sidebar:
     st.header("3. Citizen ID Upload")
 
     citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
-    id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"])
+    id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"]) # Upload ID image
 
     upload_citizen_file = st.button("Upload Citizen ID Document")
 
     if upload_citizen_file:
             if not id_image:
-                st.warning("Bitte zuerst ein Ausweisbild hochladen.")
+                st.warning("Please upload an ID image before proceeding.")
             else:
                 try:
                     extracted_data = process_id_document(id_image.read(), citizen_id)
@@ -110,7 +110,7 @@ with st.sidebar:
                     time.sleep(2)
                     msg.empty()
 
-                    st.text("OCR mapping completed.")
+                    st.text("ID Document successfully processed!")
                 except Exception as exc:
                     st.error(f"OCR processing failed: {exc}")
 
