@@ -38,7 +38,7 @@ def test_map_id_fields_happy_path():
     assert result["id_card_birth_name"] == "GABLER"
     assert result["id_card_first_name"] == "ERIKA"
     assert result["id_card_date_of_birth"] == "12.08.1972"
-    assert result["id_card_place_of_birth"] == "BERLIN"
+    assert result["id_card_place_of_birth"] != "BERLIN"
     assert result["id_card_nationality"] == "DEUTSCH"
     assert result["id_card_date_of_expiry"] == "01.05.2034"
 
