@@ -168,3 +168,7 @@ Access Pocketbase under http://127.0.0.1:8080/_/
 > `docker exec -it pocketbase /pb/pocketbase superuser create EMAIL_ADRESS PASSWORD`
 >
 > Docker Compose (pocketbase service) must be running in the background for this to work.
+
+## 8. MailHog
+
+Access Mailhog under http://127.0.0.1:8025
