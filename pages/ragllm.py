@@ -18,9 +18,10 @@ import time
 from extensions.report_generator import *
 from extensions.idprovider import *
 from extensions.pocketbase import *
+from extensions.user import User
 
 # Define the static data directory (mounted via Docker)
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 
 st.set_page_config(page_title="Digital Assistant - RAG-LLM", layout="wide")
 st.title("🤖 Digital Assistant - RAG-LLM (Hybrid)")
@@ -154,33 +155,7 @@ with st.sidebar:
 
         st.divider()
 
-        @st.dialog("Enter your email address")
-        def email_dialog(exception: str):
-            st.error(exception)
-            st.write("Please provide your email to receive the report.")
-            email = st.text_input("Email")
-
-            if st.button("Send email"):
-                try:
-                    send_report_via_email(st.session_state.report, email)
-                    st.success("Email sent successfully.")
-                except (EmptyReportError, EmptyEmailAddressError) as e:
-                    st.warning(str(e))
-                except Exception as e:
-                    st.exception(e)
-
-        if st.button("Print Report"):
-            try:
-                print_report(st.session_state.report)
-
-                st.success("Report printed successfully.")
-            except EmptyReportError as e:
-                st.warning(str(e))
-            except PrinterBrokenError as e:
-                email_dialog(str(e))
-            except Exception as e:
-                st.exception(e)
-
+        print_report_btn = st.button("Print Report")
 
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:
@@ -195,6 +170,36 @@ if "report" not in st.session_state:
     st.session_state.report = None
 if "active_source" not in st.session_state:
     st.session_state.active_source = None
+if "user" not in st.session_state:
+    st.session_state.user = get_user_from_auth_store()
+
+# Dialog for entering a email address
+@st.dialog("Enter your email address")
+def email_dialog(exception: str):
+    st.error(exception)
+    st.write("Please provide your email to receive the report.")
+    email = st.text_input("Email")
+
+    if st.button("Send email"):
+        try:
+            send_report_via_email(st.session_state.report, email, st.session_state.user)
+            st.success("Email sent successfully.")
+        except (EmptyReportError, EmptyEmailAddressError) as e:
+            st.warning(str(e))
+        except Exception as e:
+            st.exception(e)
+
+if print_report_btn:
+    try:
+        print_report(st.session_state.report, st.session_state.user)
+
+        st.success("Report printed successfully.")
+    except EmptyReportError as e:
+        st.sidebar.warning(str(e))
+    except PrinterBrokenError as e:
+        email_dialog(str(e))
+    except Exception as e:
+        st.sidebar.exception(e)
 
 # --- INITIALIZATION CHECK ---
 if provider == "OpenAI" and not api_key:

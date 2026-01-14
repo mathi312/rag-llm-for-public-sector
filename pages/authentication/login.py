@@ -1,7 +1,10 @@
 import streamlit as st
 import re
+import json
 from extensions.pocketbase import *
 from extensions.pocketbase_messages import PBError, PBWarning, PBSuccess
+from extensions.user import User
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Login", layout="centered")
 
@@ -25,6 +28,9 @@ with st.form("login_form"):
             auth_result = authenticate_user(email, password)
             if auth_result != PBError.AUTHENTICATION_FAILED.name:
                 client.auth_store.save(auth_result.token, auth_result.record)
+
+                user = User.from_pb_record(auth_result.record)
+                st.session_state.user = user
 
                 if remember:
                     st.session_state["pb_auth"] = {
