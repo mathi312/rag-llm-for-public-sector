@@ -147,6 +147,7 @@ Open your web browser and navigate to:
     ├── Dockerfile          # App Container Definition
     ├── docker-compose.yml  # Service Orchestration
     ├── extensions/         # Folder for code extension (Feature Implementation)
+    ├── tests/              # Folder for test files (Test implementation)
     └── data/               # Folder for static documents (User created)
 
 ---
@@ -172,3 +173,11 @@ Access Pocketbase under http://127.0.0.1:8080/_/
 ## 8. MailHog
 
 Access Mailhog under http://127.0.0.1:8025
+
+## 9. Testing
+
+To run tests, first create a testfile in the **tests/** folder. The naming convention for the testfiles is test as prefix and the component you want to test as suffix, e.g.: **test_idprovider.py**
+
+Type in this command to run the tests:
+
+    docker compose run --rm rag-app-test
