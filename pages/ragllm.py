@@ -12,10 +12,10 @@ from loaders import load_files_to_documents, load_directory_documents, split_doc
 from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
 from chat import create_rag_chain, answer_question
-from extensions.report_generator import *
 
 import time
 
+from extensions.report_generator import *
 from extensions.idprovider import *
 from extensions.pocketbase import *
 
@@ -25,124 +25,162 @@ DATA_DIR = Path(__file__).parent / "data"
 st.set_page_config(page_title="Digital Assistant - RAG-LLM", layout="wide")
 st.title("🤖 Digital Assistant - RAG-LLM (Hybrid)")
 
+# -- DEFAULT VALUES --
+provider = "Local (Ollama)"
+api_key = None
+selected_model = "llama3.2"
+embedding_model_name = selected_model
+include_static = False
+uploaded_files = None
+static_files = []
+build_mode = "Use existing index"
+process_btn = False
+# -- --
+
+
 # --- SIDEBAR UI ---
 with st.sidebar:
     st.header("Current User")
-    is_logged_in()
-
-    st.divider()
-                
-    st.header("1. AI Provider Configuration")
-    
-    provider = st.radio("Select Provider", ["Local (Ollama)", "OpenAI"], index=0)
-    
-    api_key = None
-    selected_model = ""
-    
-    if provider == "OpenAI":
-        api_key = st.text_input("OpenAI API Key", type="password")
-        selected_model = st.selectbox("Select OpenAI Model", ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"], index=1)
-        # We hardcode the embedding model for OpenAI to be consistent
-        embedding_model_name = "text-embedding-3-small"
-    else:
-        selected_model = st.selectbox("Select Local Model", ["llama3.2", "llama3", "mistral"], index=0)
-        embedding_model_name = selected_model  # Ollama uses the same model tag usually
+    show_logged_in_status()
 
     st.divider()
 
-    st.header("2. Data Sources")
-    
-    # Static Files Check
-    static_files = []
-    if DATA_DIR.exists():
-        static_files = [f for f in DATA_DIR.iterdir() if f.suffix.lower() in ['.pdf', '.docx']]
-    
-    if static_files:
-        st.success(f"✅ Found {len(static_files)} static files in /data")
-        include_static = st.checkbox("Include static files", value=True)
-    else:
-        st.info("No static files found in /data")
-        include_static = False
+    tab_labels = ["General"]
+    is_admin = is_authenticated() and user_is_admin()
+    if is_admin:
+        tab_labels.append("Administration")
 
-    # Upload Files
-    uploaded_files = st.file_uploader(
-        "Upload additional files",
-        type=["pdf", "docx"],
-        accept_multiple_files=True
-    )
+    tabs = st.tabs(tab_labels)
 
-    st.divider()
+    if is_admin:
+        admin_tab = tabs[1]
+        with admin_tab:
+            st.header("1. AI Provider Configuration")
 
-    # Citizen ID Upload Section
-    st.header("3. Citizen ID Upload")
+            provider = st.radio(
+                "Select Provider", ["Local (Ollama)", "OpenAI"], index=0
+            )
 
-    citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
+            api_key = None
+            selected_model = ""
 
-    upload_citizen_file = st.button("Upload Citizen ID Document")
+            if provider == "OpenAI":
+                api_key = st.text_input("OpenAI API Key", type="password")
+                selected_model = st.selectbox(
+                    "Select OpenAI Model",
+                    ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+                    index=1,
+                )
+                # We hardcode the embedding model for OpenAI to be consistent
+                embedding_model_name = "text-embedding-3-small"
+            else:
+                selected_model = st.selectbox(
+                    "Select Local Model", ["llama3.2", "llama3", "mistral"], index=0
+                )
+                embedding_model_name = (
+                    selected_model  # Ollama uses the same model tag usually
+                )
 
-    if upload_citizen_file:
-        # Mappe den gewählten Ausweis auf die Mock-Daten
-        def get_selected_id_data(selection: str) -> dict:
-            if selection == "ID Card":
-                return id_card
-            if selection == "Passport":
-                return passport
-            if selection == "Residence Permit":
-                return residence_permit
-            return {}
+            st.divider()
 
-        st.session_state["id_document"] = {
-            "type": citizen_id,
-            "data": get_selected_id_data(citizen_id)
-        }
-        st.session_state["id_uploaded"] = True
+            st.header("2. Data Sources")
 
-        # Show success message for 5 seconds
-        msg = st.empty()
-        msg.success(f"{citizen_id} document uploaded successfully!")
-        time.sleep(2)
-        msg.empty()
+            # Static Files Check
+            static_files = []
+            if DATA_DIR.exists():
+                static_files = [
+                    f
+                    for f in DATA_DIR.iterdir()
+                    if f.suffix.lower() in [".pdf", ".docx"]
+                ]
 
-        st.text(process_id_document())
+            if static_files:
+                st.success(f"✅ Found {len(static_files)} static files in /data")
+                include_static = st.checkbox("Include static files", value=True)
+            else:
+                st.info("No static files found in /data")
+                include_static = False
 
-    st.divider()
+            # Upload Files
+            uploaded_files = st.file_uploader(
+                "Upload additional files",
+                type=["pdf", "docx"],
+                accept_multiple_files=True,
+            )
 
-    build_mode = st.radio(
-        "Index mode",
-        ["Use existing index", "Rebuild index"],
-        index=0
-    )
+            st.divider()
 
-    process_btn = st.button("Build / Update Index")
+            build_mode = st.radio(
+                "Index mode", ["Use existing index", "Rebuild index"], index=0
+            )
 
-    st.divider()
+            process_btn = st.button("Build / Update Index")
 
-    @st.dialog("Enter your email address")
-    def email_dialog(exception: str):
-        st.error(exception)
-        st.write("Please provide your email to receive the report.")
-        email = st.text_input("Email")
+    user_tab = tabs[0]
+    with user_tab:
+        # Citizen ID Upload Section
+        st.header("Citizen ID Upload")
 
-        if st.button("Send email"):
+        citizen_id = st.selectbox(
+            "Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0
+        )
+
+        upload_citizen_file = st.button("Upload Citizen ID Document")
+
+        if upload_citizen_file:
+            # Mappe den gewählten Ausweis auf die Mock-Daten
+            def get_selected_id_data(selection: str) -> dict:
+                if selection == "ID Card":
+                    return id_card
+                if selection == "Passport":
+                    return passport
+                if selection == "Residence Permit":
+                    return residence_permit
+                return {}
+
+            st.session_state["id_document"] = {
+                "type": citizen_id,
+                "data": get_selected_id_data(citizen_id),
+            }
+            st.session_state["id_uploaded"] = True
+
+            # Show success message for 5 seconds
+            msg = st.empty()
+            msg.success(f"{citizen_id} document uploaded successfully!")
+            time.sleep(2)
+            msg.empty()
+
+            st.text(process_id_document())
+
+        st.divider()
+
+        @st.dialog("Enter your email address")
+        def email_dialog(exception: str):
+            st.error(exception)
+            st.write("Please provide your email to receive the report.")
+            email = st.text_input("Email")
+
+            if st.button("Send email"):
+                try:
+                    send_report_via_email(st.session_state.report, email)
+                    st.success("Email sent successfully.")
+                except (EmptyReportError, EmptyEmailAddressError) as e:
+                    st.warning(str(e))
+                except Exception as e:
+                    st.exception(e)
+
+        if st.button("Print Report"):
             try:
-                send_report_via_email(st.session_state.report, email)
-                st.success("Email sent successfully.")
-            except (EmptyReportError, EmptyEmailAddressError) as e:
+                print_report(st.session_state.report)
+
+                st.success("Report printed successfully.")
+            except EmptyReportError as e:
                 st.warning(str(e))
+            except PrinterBrokenError as e:
+                email_dialog(str(e))
             except Exception as e:
                 st.exception(e)
 
-    if st.button("Print Report"):
-        try:
-            print_report(st.session_state.report)
-
-            st.success("Report printed successfully.")
-        except EmptyReportError as e:
-            st.warning(str(e))
-        except PrinterBrokenError as e:
-            email_dialog(str(e))
-        except Exception as e:
-            st.exception(e)
 
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:
@@ -177,6 +215,7 @@ if st.session_state.vector_store is None:
         st.session_state.vector_store = vs
         st.sidebar.success("Loaded existing index.")
 
+
 # --- Dialog to display the source ---
 @st.dialog("Source Content")
 def show_source_details(content, title):
@@ -186,45 +225,50 @@ def show_source_details(content, title):
     if st.button("Close"):
         st.rerun()
 
+
 # --- Check for active source ---
 if st.session_state.active_source:
     source_data = st.session_state.active_source
-    st.session_state.active_source = None 
+    st.session_state.active_source = None
     show_source_details(source_data["content"], source_data["title"])
+
 
 # --- Helper to show source content
 def handle_source_click(content, title):
     st.session_state.active_source = {"content": content, "title": title}
 
+
 # --- BUILD LOGIC ---
 if process_btn:
     if build_mode == "Rebuild index" or not st.session_state.vector_store:
-        
+
         all_docs = []
         status_msg = st.sidebar.empty()
-        
+
         # Load Static Files
         if include_static and static_files:
             status_msg.info("Loading static files from /data ...")
             static_docs = load_directory_documents(DATA_DIR)
             all_docs.extend(static_docs)
-            
+
         # Load Uploaded Files
         if uploaded_files:
             status_msg.info("Loading uploaded files...")
             upload_docs = load_files_to_documents(uploaded_files)
             all_docs.extend(upload_docs)
-            
+
         if not all_docs:
             st.sidebar.warning("No documents found.")
         else:
             status_msg.info(f"Processing {len(all_docs)} documents...")
             splits = split_documents(all_docs)
-            
+
             status_msg.info("Building vector index...")
             # Batch size 5 is safe for local; OpenAI can handle larger but 5 is fine for both
-            st.session_state.vector_store = build_index_from_documents(splits, embeddings, batch_size=5)
-            
+            st.session_state.vector_store = build_index_from_documents(
+                splits, embeddings, batch_size=5
+            )
+
             status_msg.success(f"Index built successfully!")
             st.sidebar.success("Index Ready.")
     else:
@@ -244,9 +288,15 @@ if st.session_state.vector_store:
                     source_name = doc.metadata.get("source", "Doc")
                     page = doc.metadata.get("page", "N/A")
                     title = f"{source_name} (P. {page})"
-                    
+
                     with cols[j]:
-                        st.button(title, key=f"btn_{i}_{j}", on_click=handle_source_click, args=(doc.page_content, title),use_container_width=True)
+                        st.button(
+                            title,
+                            key=f"btn_{i}_{j}",
+                            on_click=handle_source_click,
+                            args=(doc.page_content, title),
+                            use_container_width=True,
+                        )
 
     if prompt := st.chat_input("Ask a question..."):
         st.chat_message("user").markdown(prompt)
@@ -263,7 +313,13 @@ if st.session_state.vector_store:
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    ans, sources = answer_question(chain, prompt, id_document=st.session_state.get("id_document"), id_uploaded=st.session_state.get("id_uploaded", False), report=st.session_state.report)
+                    ans, sources = answer_question(
+                        chain,
+                        prompt,
+                        id_document=st.session_state.get("id_document"),
+                        id_uploaded=st.session_state.get("id_uploaded", False),
+                        report=st.session_state.report,
+                    )
                     st.markdown(ans)
 
                     if sources:
@@ -271,13 +327,17 @@ if st.session_state.vector_store:
                         for k, doc in enumerate(sources):
                             title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
                             with cols[k]:
-                                st.button(title, key=f"btn_new_{k}", on_click=handle_source_click, args=(doc.page_content, title), use_container_width=True)
+                                st.button(
+                                    title,
+                                    key=f"btn_new_{k}",
+                                    on_click=handle_source_click,
+                                    args=(doc.page_content, title),
+                                    use_container_width=True,
+                                )
 
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": ans, 
-                "sources": sources
-            })
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ans, "sources": sources}
+            )
         except Exception as e:
             st.error(f"An error occurred: {e}")
 else:
