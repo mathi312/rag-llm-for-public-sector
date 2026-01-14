@@ -13,3 +13,7 @@ tiktoken
 fpdf2>=2.8.1
 pocketbase
 beautifulsoup4
+pytesseract
+easyocr
+torch
+pytest

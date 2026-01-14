@@ -36,6 +36,122 @@ uploaded_files = None
 static_files = []
 build_mode = "Use existing index"
 process_btn = False
+# --- SIDEBAR UI ---
+with st.sidebar:
+    st.header("Current User")
+    show_logged_in_status()
+
+    st.divider()
+                
+    st.header("1. AI Provider Configuration")
+    
+    provider = st.radio("Select Provider", ["Local (Ollama)", "OpenAI"], index=0)
+    
+    api_key = None
+    selected_model = ""
+    
+    if provider == "OpenAI":
+        api_key = st.text_input("OpenAI API Key", type="password")
+        selected_model = st.selectbox("Select OpenAI Model", ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"], index=1)
+        # We hardcode the embedding model for OpenAI to be consistent
+        embedding_model_name = "text-embedding-3-small"
+    else:
+        selected_model = st.selectbox("Select Local Model", ["llama3.2", "llama3", "mistral"], index=0)
+        embedding_model_name = selected_model  # Ollama uses the same model tag usually
+
+    st.divider()
+
+    st.header("2. Data Sources")
+    
+    # Static Files Check
+    static_files = []
+    if DATA_DIR.exists():
+        static_files = [f for f in DATA_DIR.iterdir() if f.suffix.lower() in ['.pdf', '.docx']]
+    
+    if static_files:
+        st.success(f"✅ Found {len(static_files)} static files in /data")
+        include_static = st.checkbox("Include static files", value=True)
+    else:
+        st.info("No static files found in /data")
+        include_static = False
+
+    # Upload Files
+    uploaded_files = st.file_uploader(
+        "Upload additional files",
+        type=["pdf", "docx"],
+        accept_multiple_files=True
+    )
+
+    st.divider()
+
+    # Citizen ID Upload Section
+    st.header("3. Citizen ID Upload")
+
+    citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
+    id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"]) # Upload ID image
+
+    upload_citizen_file = st.button("Upload Citizen ID Document")
+
+    if upload_citizen_file:
+            if not id_image:
+                st.warning("Please upload an ID image before proceeding.")
+            else:
+                try:
+                    extracted_data = process_id_document(id_image.read(), citizen_id)
+
+                    st.session_state["id_document"] = {
+                        "type": citizen_id,
+                        "data": extracted_data,
+                    }
+                    st.session_state["id_uploaded"] = True
+
+                    msg = st.empty()
+                    msg.success(f"{citizen_id} document uploaded successfully!")
+                    time.sleep(2)
+                    msg.empty()
+
+                    st.text("ID Document successfully processed!")
+                except Exception as exc:
+                    st.error(f"OCR processing failed: {exc}")
+
+    st.divider()
+
+    build_mode = st.radio(
+        "Index mode",
+        ["Use existing index", "Rebuild index"],
+        index=0
+    )
+
+    process_btn = st.button("Build / Update Index")
+
+    st.divider()
+
+    @st.dialog("Enter your email address")
+    def email_dialog(exception: str):
+        st.error(exception)
+        st.write("Please provide your email to receive the report.")
+        email = st.text_input("Email")
+
+        if st.button("Send email"):
+            try:
+                send_report_via_email(st.session_state.report, email)
+                st.success("Email sent successfully.")
+            except (EmptyReportError, EmptyEmailAddressError) as e:
+                st.warning(str(e))
+            except Exception as e:
+                st.exception(e)
+
+    if st.button("Print Report"):
+        try:
+            print_report(st.session_state.report)
+
+            st.success("Report printed successfully.")
+        except EmptyReportError as e:
+            st.warning(str(e))
+        except PrinterBrokenError as e:
+            email_dialog(str(e))
+        except Exception as e:
+            st.exception(e)
 
 # --- SESSION STATE ---
 if "vector_store" not in st.session_state:

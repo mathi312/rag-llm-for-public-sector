@@ -68,5 +68,15 @@ services:
       - "8025:8025"
       - "1025:1025"
 
+  rag-app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["pytest"]
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./:/app
+
 volumes:
   ollama_data:
