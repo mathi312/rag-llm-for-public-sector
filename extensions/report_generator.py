@@ -139,7 +139,7 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
     """
     if report is None:
         raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
-    if to_email is "":
+    if not to_email:
         raise EmptyEmailAddressError("The email address is empty. Please enter a email address!")
     
     report.send_via_email('report@ragllm.uni-ulm.de', to_email, user=user)
