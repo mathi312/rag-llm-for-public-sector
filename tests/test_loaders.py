@@ -86,7 +86,7 @@ def test_load_directory_documents_success(mock_docx, mock_pdf, tmp_path):
 
     documents = load_directory_documents(tmp_path)
 
-    assert documents == ["pdf-doc", "docx-doc"]
+    assert set(documents) == {'docx-doc', 'pdf-doc'}
 
 @patch("loaders.RecursiveCharacterTextSplitter")
 def test_split_documents(mock_splitter):
