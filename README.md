@@ -180,4 +180,4 @@ To run tests, first create a testfile in the **tests/** folder. The naming conve
 
 Type in this command to run the tests:
 
-    docker compose run --rm rag-app-test
+    docker compose --profile test run --rm rag-app-test
