@@ -27,22 +27,24 @@ FIELD_PATTERNS: Dict[str, Dict[str, str]] = {
     },
     "Passport": {
         "passport_number": "",
-        "passport_name": "",
+        "passport_last_name": "",
         "passport_birth_name": "",
         "passport_first_name": "",
         "passport_date_of_birth": "",
         "passport_place_of_birth": "",
         "passport_nationality": "",
+        "passport_date_of_issue": "",
         "passport_date_of_expiry": "",
+        "passport_authority": "",
     },
     "Residence permit": {
         "residence_permit_number": "",
-        "residence_permit_name": "",
-        "residence_permit_birth_name": "",
+        "residence_permit_last_name": "",
         "residence_permit_first_name": "",
         "residence_permit_date_of_birth": "",
-        "residence_permit_place_of_birth": "",
         "residence_permit_nationality": "",
+        "residence_permit_sex": "",
+        "residence_permit_type_of_permit": "",
         "residence_permit_date_of_expiry": "",
     },
 }
@@ -53,14 +55,37 @@ def map_id_fields(id_type: str, lines: List[str]) -> Dict[str, str]:
     patterns = FIELD_PATTERNS.get(id_type, {})
     mapped: Dict[str, str] = {k: "" for k in patterns.keys()}
 
-    mapped["id_card_number"] = mapped.get("id_card_number", "") or lines[1].strip().replace(" ", "")
-    mapped["id_card_name"] = mapped.get("id_card_name", "") or lines[9].strip()[3:]
-    mapped["id_card_birth_name"] = mapped.get("id_card_birth_name", "") or lines[10].strip()[3:]
-    mapped["id_card_first_name"] = mapped.get("id_card_first_name", "") or lines[12].strip()
-    mapped["id_card_date_of_birth"] = mapped.get("id_card_date_of_birth", "") or lines[17].strip() + "." + lines[18].strip() + "." + lines[19].strip()
-    mapped["id_card_place_of_birth"] = mapped.get("id_card_place_of_birth", "") or lines[22].strip()
-    mapped["id_card_nationality"] = mapped.get("id_card_nationality", "") or lines[20].strip()
-    mapped["id_card_date_of_expiry"] = mapped.get("id_card_date_of_expiry", "") or lines[25].strip() + "." + lines[26].strip().replace(" ", "")
+    if id_type == "ID Card":
+        mapped["id_card_number"] = mapped.get("id_card_number", "") or lines[1].strip().replace(" ", "")
+        mapped["id_card_name"] = mapped.get("id_card_name", "") or lines[9].strip()[3:]
+        mapped["id_card_birth_name"] = mapped.get("id_card_birth_name", "") or lines[10].strip()[3:]
+        mapped["id_card_first_name"] = mapped.get("id_card_first_name", "") or lines[12].strip()
+        mapped["id_card_date_of_birth"] = mapped.get("id_card_date_of_birth", "") or lines[17].strip() + "." + lines[18].strip() + "." + lines[19].strip()
+        mapped["id_card_place_of_birth"] = mapped.get("id_card_place_of_birth", "") or lines[22].strip()
+        mapped["id_card_nationality"] = mapped.get("id_card_nationality", "") or lines[20].strip()
+        mapped["id_card_date_of_expiry"] = mapped.get("id_card_date_of_expiry", "") or lines[25].strip() + "." + lines[26].strip().replace(" ", "")
+
+    if id_type == "Passport":
+        mapped["passport_number"] = mapped.get("passport_number", "") or lines[14].upper().strip().replace(" ", "").replace("O", "0")
+        mapped["passport_last_name"] = mapped.get("passport_last_name", "") or lines[21].strip()
+        mapped["passport_birth_name"] = mapped.get("passport_birth_name", "") or lines[22].strip()
+        mapped["passport_first_name"] = mapped.get("passport_first_name", "") or lines[26].strip()
+        mapped["passport_date_of_birth"] = mapped.get("passport_date_of_birth", "") or lines[36].strip()
+        mapped["passport_place_of_birth"] = mapped.get("passport_place_of_birth", "") or lines[41].strip()
+        mapped["passport_nationality"] = mapped.get("passport_nationality", "") or lines[37].strip()
+        mapped["passport_date_of_issue"] = mapped.get("passport_date_of_issue", "") or lines[52].strip()
+        mapped["passport_date_of_expiry"] = mapped.get("passport_date_of_expiry", "") or lines[53].strip()
+        mapped["passport_authority"] = mapped.get("passport_authority", "") or lines[58].strip()
+
+    if id_type == "Residence permit":
+        mapped["residence_permit_number"] = mapped.get("residence_permit_number", "") or lines[1].strip().replace(" ", "")
+        mapped["residence_permit_last_name"] = mapped.get("residence_permit_name", "") or lines[4].strip()
+        mapped["residence_permit_first_name"] = mapped.get("residence_permit_birth_name", "") or lines[5].strip()
+        mapped["residence_permit_date_of_birth"] = mapped.get("residence_permit_date_of_birth", "") or lines[14].strip() + "." + lines[15].strip() + "." + lines[16].strip()
+        mapped["residence_permit_nationality"] = mapped.get("residence_permit_nationality", "") or lines[13].strip()
+        mapped["residence_permit_sex"] = mapped.get("residence_permit_sex", "") or lines[12].strip()
+        mapped["residence_permit_type_of_permit"] = mapped.get("residence_permit_type_of_permit", "") or lines[19].strip()
+        mapped["residence_permit_date_of_expiry"] = mapped.get("residence_permit_date_of_expiry", "") or lines[20].strip() + "." + lines[21].strip() + "." + lines[22].strip()
 
     return mapped
     
