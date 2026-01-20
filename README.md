@@ -182,6 +182,12 @@ Type in this command to run the tests:
 
     docker compose --profile test run --rm rag-app-test
 
+Enter these commands to run the end-to-end integration tests:
+
+    MOCK_POCKETBASE=true docker compose up -d
+
+    docker compose --profile integration-test run --rm rag-app-integration-test
+
 ### 9.1. Code Coverage
 
 For this the tool [Coverage.py](https://coverage.readthedocs.io/) is used.

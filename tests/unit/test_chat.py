@@ -39,7 +39,7 @@ class TestAnswerQuestion:
     
     @pytest.fixture
     def mock_rag_chain(self):
-        """This method creates a rag chain mock"""
+        """This method creates a mock for the rag chain"""
         chain = MagicMock()
         chain.invoke.return_value = {
             "answer": "Dies ist die Antwort.",
@@ -49,6 +49,7 @@ class TestAnswerQuestion:
 
     @pytest.fixture
     def mock_report(self):
+        """This method creates a mock for the report"""
         return MagicMock()
 
     def test_basic_answer_flow(self, mock_rag_chain):

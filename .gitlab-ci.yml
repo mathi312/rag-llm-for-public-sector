@@ -10,7 +10,7 @@ pytest:
     - apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng libgl1 libglib2.0-0
     - pip install --no-cache-dir -r requirements.txt
   script:
-    - python -m coverage run -m pytest tests
+    - python -m coverage run -m pytest tests/unit
     - python -m coverage report -m
     - python -m coverage xml
     - python -m coverage html
