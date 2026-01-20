@@ -18,8 +18,11 @@ def restore_session() -> None:
         # validate stored session
         token = auth_data.get("token")
         model = auth_data.get("model")
-        if token and model:
-            client.auth_store.save(token, model)
+        if not token or model is None:
+            # invalid stored session, clear it
+            st.session_state.pop("pb_auth", None)
+            return
+        client.auth_store.save(token, model)
     except Exception:
         # if invalid, clear session
         st.session_state.pop("pb_auth", None)
@@ -62,7 +65,7 @@ def user_is_admin() -> bool:
     """Check if the authenticated user is an admin."""
     model = client.auth_store.model
 
-    if not model:
+    if model is None:
         return False
 
     if hasattr(model, "get"):

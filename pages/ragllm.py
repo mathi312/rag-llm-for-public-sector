@@ -158,7 +158,7 @@ with st.sidebar:
     user_tab = tabs[0]
     with user_tab:
         # Citizen ID Upload Section
-        st.header("3. Citizen ID Upload")
+        st.header("Citizen ID Upload")
 
         citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
         id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"]) # Upload ID image
@@ -167,7 +167,7 @@ with st.sidebar:
 
         if upload_citizen_file:
                 if not id_image:
-                    st.warning("Please upload an ID image before proceeding.")
+                    st.warning("Please upload an image of your ID before proceeding.")
                 else:
                     try:
                         extracted_data = process_id_document(id_image.read(), citizen_id)
