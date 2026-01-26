@@ -29,14 +29,20 @@ SUGGESTED_QUESTIONS = [
     "Welche Modelle sind verfügbar?"
 ]
 
+if "hide_suggestions" not in st.session_state:
+    st.session_state.hide_suggestions = False
+
 def render_suggestions():
-    st.markdown("#### Vorschläge")
+    if st.session_state.hide_suggestions:
+        return
+    st.markdown("#### How can I help you today?")
     cols = st.columns(3)
     for i, q in enumerate(SUGGESTED_QUESTIONS):
         with cols[i % 3]:
             if st.button(q, key=f"suggest-{i}"):
                 st.session_state["prefill"] = q
                 st.session_state["auto_send"] = True
+                st.session_state.hide_suggestions = True  # sofort ausblenden
 
 
 # Define the static data directory (mounted via Docker)
@@ -354,6 +360,8 @@ if st.session_state.vector_store:
     user_msg = prefill if auto_send else user_input
 
 if auto_send or user_msg:
+    st.session_state.hide_suggestions = True
+
     prompt = user_msg
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -395,6 +403,7 @@ if auto_send or user_msg:
         st.session_state.messages.append(
             {"role": "assistant", "content": ans, "sources": sources}
         )
+
     except Exception as e:
         st.error(f"An error occurred: {e}")
 else:
