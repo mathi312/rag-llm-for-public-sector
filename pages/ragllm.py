@@ -20,6 +20,25 @@ from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
 
+#Questions suggestions für Bubbles
+SUGGESTED_QUESTIONS = [
+    "Welche Dateien sind bereits indexiert?",
+    "Erkläre mir die Beziehung zwischen Blutdruck und Blutfluss",
+    "Wie wechsle ich von Ollama zu OpenAI?",
+    "Baue den Index neu auf.",
+    "Welche Modelle sind verfügbar?"
+]
+
+def render_suggestions():
+    st.markdown("#### Vorschläge")
+    cols = st.columns(3)
+    for i, q in enumerate(SUGGESTED_QUESTIONS):
+        with cols[i % 3]:
+            if st.button(q, key=f"suggest-{i}"):
+                st.session_state["prefill"] = q
+                st.session_state["auto_send"] = True
+
+
 # Define the static data directory (mounted via Docker)
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -328,47 +347,55 @@ if st.session_state.vector_store:
                             use_container_width=True,
                         )
 
-    if prompt := st.chat_input("Ask a question..."):
-        st.chat_message("user").markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    render_suggestions()
+    auto_send = st.session_state.pop("auto_send", False)
+    prefill = st.session_state.pop("prefill", "")
+    user_input = st.chat_input("Frage stellen …")  # bleibt immer sichtbar
+    user_msg = prefill if auto_send else user_input
 
-        try:
-            llm = get_llm(provider, selected_model, api_key=api_key)
+if auto_send or user_msg:
+    prompt = user_msg
+    st.chat_message("user").markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-            if st.session_state.report is None:
-                llm_name = getattr(llm, "model_name", llm.__class__.__name__)
-                st.session_state.report = Report(llm_name)
 
-            chain = create_rag_chain(st.session_state.vector_store, llm)
+    try:
+        llm = get_llm(provider, selected_model, api_key=api_key)
 
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    ans, sources = answer_question(
-                        chain,
-                        prompt,
-                        id_document=st.session_state.get("id_document"),
-                        id_uploaded=st.session_state.get("id_uploaded", False),
-                        report=st.session_state.report,
-                    )
-                    st.markdown(ans)
+        if st.session_state.report is None:
+            llm_name = getattr(llm, "model_name", llm.__class__.__name__)
+            st.session_state.report = Report(llm_name)
 
-                    if sources:
-                        cols = st.columns(len(sources))
-                        for k, doc in enumerate(sources):
-                            title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
-                            with cols[k]:
-                                st.button(
-                                    title,
-                                    key=f"btn_new_{k}",
-                                    on_click=handle_source_click,
-                                    args=(doc.page_content, title),
-                                    use_container_width=True,
-                                )
+        chain = create_rag_chain(st.session_state.vector_store, llm)
 
-            st.session_state.messages.append(
-                {"role": "assistant", "content": ans, "sources": sources}
-            )
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                ans, sources = answer_question(
+                     chain,
+                      prompt,
+                      id_document=st.session_state.get("id_document"),
+                      id_uploaded=st.session_state.get("id_uploaded", False),
+                      report=st.session_state.report,
+                )
+                st.markdown(ans)
+
+                if sources:
+                    cols = st.columns(len(sources))
+                    for k, doc in enumerate(sources):
+                        title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
+                        with cols[k]:
+                            st.button(
+                                title,
+                                key=f"btn_new_{k}",
+                                on_click=handle_source_click,
+                                args=(doc.page_content, title),
+                                use_container_width=True,
+                            )
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": ans, "sources": sources}
+        )
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 else:
     st.info("Please build the index to start chatting.")
