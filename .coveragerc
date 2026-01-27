@@ -1,0 +1,16 @@
+[run]
+branch = True
+source = .
+omit =
+    */tests/*
+    */venv/*
+    */_remote_module_non_scriptable*
+    */config-3.py
+
+[report]
+omit =
+    */tests/*
+    */venv/*
+
+[html]
+directory = coverage_html_report

@@ -181,3 +181,15 @@ To run tests, first create a testfile in the **tests/** folder. The naming conve
 Type in this command to run the tests:
 
     docker compose run --rm rag-app-test
+
+### 9.1. Code Coverage
+
+To run test coverage and dump file, use these commands:
+
+```docker compose run --rm --entrypoint "" rag-app-test python -m coverage run -m pytest tests```
+
+```docker compose run --rm --entrypoint "" rag-app-test python -m coverage report -m```
+
+```docker compose run --rm --entrypoint "" rag-app-test python -m coverage html```
+
+A folder named `coverage_html_report` will be created. If you open the `index.html` in a browser, you will see all the coverage based information.

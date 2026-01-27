@@ -24,6 +24,7 @@
 !README.md
 !.gitignore
 !.dockerignore
+!.coveragerc
 
 # --- 4. Whitelist Data Directory Structure (but not content) ---
 !data/
