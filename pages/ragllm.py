@@ -359,52 +359,52 @@ if st.session_state.vector_store:
     user_input = st.chat_input("Frage stellen …")  # bleibt immer sichtbar
     user_msg = prefill if auto_send else user_input
 
-if auto_send or user_msg:
-    st.session_state.hide_suggestions = True
+    if auto_send or user_msg:
+        st.session_state.hide_suggestions = True
 
-    prompt = user_msg
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+        prompt = user_msg
+        st.chat_message("user").markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
 
-    try:
-        llm = get_llm(provider, selected_model, api_key=api_key)
+        try:
+            llm = get_llm(provider, selected_model, api_key=api_key)
 
-        if st.session_state.report is None:
-            llm_name = getattr(llm, "model_name", llm.__class__.__name__)
-            st.session_state.report = Report(llm_name)
+            if st.session_state.report is None:
+                llm_name = getattr(llm, "model_name", llm.__class__.__name__)
+                st.session_state.report = Report(llm_name)
 
-        chain = create_rag_chain(st.session_state.vector_store, llm)
+            chain = create_rag_chain(st.session_state.vector_store, llm)
 
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                ans, sources = answer_question(
-                     chain,
-                      prompt,
-                      id_document=st.session_state.get("id_document"),
-                      id_uploaded=st.session_state.get("id_uploaded", False),
-                      report=st.session_state.report,
-                )
-                st.markdown(ans)
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    ans, sources = answer_question(
+                        chain,
+                        prompt,
+                        id_document=st.session_state.get("id_document"),
+                        id_uploaded=st.session_state.get("id_uploaded", False),
+                        report=st.session_state.report,
+                    )
+                    st.markdown(ans)
 
-                if sources:
-                    cols = st.columns(len(sources))
-                    for k, doc in enumerate(sources):
-                        title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
-                        with cols[k]:
-                            st.button(
-                                title,
-                                key=f"btn_new_{k}",
-                                on_click=handle_source_click,
-                                args=(doc.page_content, title),
-                                use_container_width=True,
-                            )
+                    if sources:
+                        cols = st.columns(len(sources))
+                        for k, doc in enumerate(sources):
+                            title = f"{doc.metadata.get('source', 'Doc')} (P. {doc.metadata.get('page', 'N/A')})"
+                            with cols[k]:
+                                st.button(
+                                    title,
+                                    key=f"btn_new_{k}",
+                                    on_click=handle_source_click,
+                                    args=(doc.page_content, title),
+                                    use_container_width=True,
+                                )
 
-        st.session_state.messages.append(
-            {"role": "assistant", "content": ans, "sources": sources}
-        )
+            st.session_state.messages.append(
+                {"role": "assistant", "content": ans, "sources": sources}
+            )
 
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
 else:
     st.info("Please build the index to start chatting.")
