@@ -25,6 +25,7 @@
 !.gitignore
 !.dockerignore
 !.coveragerc
+!.env.example
 
 # --- 4. Whitelist Data Directory Structure (but not content) ---
 !data/

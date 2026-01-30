@@ -45,6 +45,8 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
       - POCKETBASE_URL=http://pocketbase:8080
       - MOCK_POCKETBASE=false
+      - POCKETBASE_ADMIN_USERNAME=${POCKETBASE_ADMIN_USERNAME}
+      - POCKETBASE_ADMIN_PASSWORD=${POCKETBASE_ADMIN_PASSWORD}
     depends_on:
       - ollama
       - pocketbase
