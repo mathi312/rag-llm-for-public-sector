@@ -19,6 +19,7 @@ from extensions.report_generator import *
 from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
+from extensions.documentupload import upload_document
 
 # Define the static data directory (mounted via Docker)
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -154,6 +155,7 @@ with st.sidebar:
             )
 
             process_btn = st.button("Build / Update Index")
+
 
     user_tab = tabs[0]
     with user_tab:
