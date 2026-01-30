@@ -20,6 +20,9 @@ if not is_authenticated():
     ]
 
 if is_authenticated():
+    pages["Documentmanager"] = [st.Page("pages/management/documents.py", title="Document Manager")]
+
+if is_authenticated():
     _, btn_col = st.columns([6, 1])
     with btn_col:
         st.button("Logout", on_click=on_logout, type="primary")
