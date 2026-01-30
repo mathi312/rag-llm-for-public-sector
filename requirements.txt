@@ -17,3 +17,4 @@ pytesseract
 easyocr
 torch
 pytest
+python-dotenv
