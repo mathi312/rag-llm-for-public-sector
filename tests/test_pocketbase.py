@@ -3,6 +3,10 @@ import pytest
 from extensions import pocketbase as pb
 
 
+"""
+These are Unit-Tests with pytest under usage of Mocks/Stubs for PocketBase and Streamlit implementation.
+"""
+
 class MockAuthStore:
     """A mock authentication store for testing purposes."""
     def __init__(self):

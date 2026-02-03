@@ -10,4 +10,18 @@ pytest:
     - apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng libgl1 libglib2.0-0
     - pip install --no-cache-dir -r requirements.txt
   script:
-    - pytest
+    - python -m coverage run -m pytest tests
+    - python -m coverage report -m
+    - python -m coverage xml
+    - python -m coverage html
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
+  artifacts:
+    when: always
+    paths:
+      - .coverage
+      - coverage.xml
+      - coverage_html_report/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
