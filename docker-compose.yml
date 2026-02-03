@@ -43,6 +43,7 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - POCKETBASE_URL=http://pocketbase:8080
+      - MOCK_POCKETBASE=false
     depends_on:
       - ollama
       - pocketbase
@@ -72,11 +73,29 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: ["pytest"]
+    entrypoint: ["pytest", "tests/unit"]
     environment:
       - PYTHONPATH=/app
     volumes:
       - ./:/app
+    profiles:
+      - unit-test
+
+  rag-app-integration-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["pytest", "tests/integration"]
+    environment:
+      - PYTHONPATH=/app
+      - BASE_URL=http://rag-app:8501
+    working_dir: /app
+    volumes:
+      - ./:/app
+    depends_on:
+      - rag-app
+    profiles:
+      - integration-test
 
 volumes:
   ollama_data:
