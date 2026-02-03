@@ -180,7 +180,7 @@ To run tests, first create a testfile in the **tests/** folder. The naming conve
 
 Type in this command to run the tests:
 
-    docker compose --profile test run --rm rag-app-test
+    docker compose --profile unit-test run --rm rag-app-test
 
 Enter these commands to run the end-to-end integration tests:
 
