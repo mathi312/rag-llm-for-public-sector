@@ -1,5 +1,5 @@
 import pytest
-from extensions.idprovider import map_id_fields
+from extensions.idprovider import map_id_fields, IdType
 
 """
 Unit-Tests with pytest for the ID field mapping functionality.
@@ -37,7 +37,7 @@ def test_map_id_fields_ocr_extraction_id_card():
         "05 .2034",
         "938568"
     ]
-    result = map_id_fields("ID Card", lines)
+    result = map_id_fields(IdType.ID_CARD, lines)
     assert result["id_card_number"] == "LZ6311T47"
     assert result["id_card_name"] == "MUSTERMANN"
     assert result["id_card_birth_name"] == "GABLER"
@@ -117,7 +117,7 @@ def test_map_id_fields_ocr_extraction_passport():
         "Co1XwZ CLV5D<<6408125F2702283<<<<<<<<<<<<<<<0"
     ]
 
-    result = map_id_fields("Passport", lines)
+    result = map_id_fields(IdType.PASSPORT, lines)
     assert result["passport_number"] == "C01XWZCLV"
     assert result["passport_last_name"] == "MUSTERMANN"
     assert result["passport_birth_name"] == "GABLER"
@@ -169,7 +169,7 @@ def test_map_id_fields_ocr_extraction_residence_permit():
         "RESIDENCE PERMIT",
     ]
 
-    result = map_id_fields("Residence permit", lines)
+    result = map_id_fields(IdType.RESIDENCE_PERMIT, lines)
     assert result["residence_permit_number"] == "YZX211V11"
     assert result["residence_permit_last_name"] == "MUSTERMANN"
     assert result["residence_permit_first_name"] == "Erika"
@@ -183,4 +183,4 @@ def test_map_id_fields_ocr_extraction_residence_permit():
 def test_map_id_fields_not_enough_lines():
     """Test that an IndexError is raised when there are not enough lines."""
     with pytest.raises(IndexError):
-        map_id_fields("ID Card", ["only", "two"])
+        map_id_fields(IdType.ID_CARD, ["only", "two"])
