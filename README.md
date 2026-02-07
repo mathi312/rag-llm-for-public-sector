@@ -194,7 +194,7 @@ For this the tool [Coverage.py](https://coverage.readthedocs.io/) is used.
 
 To run test coverage and dump file, use these commands:
 
-    docker compose run --rm --entrypoint "" rag-app-test python -m coverage run -m pytest tests
+    docker compose run --rm --entrypoint "" rag-app-test python -m coverage run -m pytest tests/unit
     
     docker compose run --rm --entrypoint "" rag-app-test python -m coverage report -m
 
