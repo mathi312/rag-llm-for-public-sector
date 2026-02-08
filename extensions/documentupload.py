@@ -31,7 +31,50 @@ def upload_document():
     uploaded_file = st.file_uploader(
         "Choose a document to upload", type=["pdf", "docx"]
     )
-    if st.button("Upload") and uploaded_file:
+
+    title_filled = bool(title and title.strip())
+
+    identical = False
+    file_bytes = None
+
+    # NEW: check immediately after file selection
+    if uploaded_file:
+        file_bytes = uploaded_file.getvalue()
+        temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
+        data_dir = Path(__file__).resolve().parent.parent / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with open(temp_file_path, "wb") as temp_file:
+                temp_file.write(file_bytes)
+
+            is_identical, similar = compare_with_existing_documents(
+                temp_file_path, data_dir, similarity_threshold=0.85
+            )
+            if is_identical:
+                identical = True
+                st.error(
+                    "Upload aborted: Content is identical to an existing document."
+                )
+
+            if similar:
+                p, ratio, diff = similar
+                st.warning(
+                    f"Similar document found: {p.name} (Similarity: {ratio:.0%})."
+                )
+                with st.expander("Show diff"):
+                    st.code(diff or "No diff available.", language="diff")
+        finally:
+            if temp_file_path.exists():
+                temp_file_path.unlink()
+
+    if (
+        st.button("Upload", disabled=identical or not uploaded_file or not title_filled)
+        and uploaded_file
+    ):
+        if not title_filled:
+            st.error("Bitte einen Titel eingeben.")
+            return None
         with st.spinner("Uploading document..."):
             temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
             data_dir = Path(__file__).resolve().parent.parent / "data"
@@ -168,6 +211,43 @@ def build_diff(fst_text: str, snd_text: str, fromfile: str, tofile: str) -> str:
     return "\n".join(diff)
 
 
+def compare_with_existing_documents(
+    new_file_path: Path,
+    data_dir: Path,
+    similarity_threshold: float = 0.85,
+) -> tuple[bool, tuple[Path, float, str] | None]:
+    """Return (is_identical, similar_info)."""
+    new_text = extract_text_from_file(new_file_path).strip()
+    if not new_text:
+        return False, None
+
+    best_match: tuple[Path, float, str] | None = None
+
+    for p in data_dir.iterdir():
+        if not p.is_file() or p.suffix.lower() not in {".pdf", ".docx"}:
+            continue
+
+        old_text = extract_text_from_file(p).strip()
+        if not old_text:
+            continue
+
+        if old_text == new_text:
+            return True, None
+
+        ratio = difflib.SequenceMatcher(None, old_text, new_text).ratio()
+        if ratio >= similarity_threshold:
+            diff = build_diff(
+                old_text,
+                new_text,
+                fromfile=f"ALT: {p.name}",
+                tofile=f"NEU: {new_file_path.name}",
+            )
+            if best_match is None or ratio > best_match[1]:
+                best_match = (p, ratio, diff)
+
+    return False, best_match
+
+
 def get_backup_dir() -> Path:
     """Get the backup directory path, creating it if it doesn't exist."""
     backup_dir = Path(__file__).resolve().parent.parent / "data" / "backup"
@@ -251,9 +331,7 @@ def update_document(
             temp_compare_path.unlink()
 
         if identical:
-            st.info(
-                "The uploaded file is identical in content. Update not possible."
-            )
+            st.info("The uploaded file is identical in content. Update not possible.")
         else:
             with st.expander("Show Changes"):
                 st.code(diff_text or "No diff generated.", language="diff")
