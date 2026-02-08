@@ -2,9 +2,9 @@ import streamlit as st
 from extensions.documentupload import (
     upload_document,
     list_documents,
-    delete_document,
     update_document,
     confirm_delete_document,
+    view_pdf_dialog
 )
 
 st.set_page_config(page_title="Document Management", layout="wide")
@@ -21,7 +21,7 @@ if st.button("Upload New Document"):
 # Show existing documents
 docs = list_documents()
 if docs:
-    columns = [2, 1, 2, 3, 1, 1, 1, 1]
+    columns = [2, 1, 2, 3, 1, 1, 1, 1, 1]
 
     cols = st.columns(columns, gap="small")
     cols[0].markdown("**Title**")
@@ -32,6 +32,7 @@ if docs:
     cols[5].markdown("**Updated**")
     cols[6].markdown("**Actions**")
     cols[7].markdown("")
+    cols[8].markdown("")
 
     st.divider()
 
@@ -55,8 +56,15 @@ if docs:
         # Updated
         cols[5].markdown(f"{doc.get('updated','')}")
 
+        # View
+        if cols[6].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
+            view_pdf_dialog(
+                document_name=doc.get("document"),
+                original_name=doc.get("original_name"),
+            )
+
         # Edit
-        if cols[6].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
+        if cols[7].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
             update_document(
                 record_id=doc["id"],
                 title=doc.get("title"),
@@ -68,7 +76,7 @@ if docs:
             )
 
         # Delete
-        if cols[7].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
+        if cols[8].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
             if confirm_delete_document(
                 record_id=doc["id"],
                 document_name=doc.get("document"),

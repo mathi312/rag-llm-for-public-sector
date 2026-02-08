@@ -12,7 +12,6 @@ import shutil
 import re
 from datetime import datetime
 
-
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
 
@@ -62,7 +61,7 @@ def upload_document():
                     dst.write(src.read())
 
                 st.session_state["upload_success_msg"] = (
-                    "Dokument erfolgreich hochgeladen."
+                    "Document uploaded successfully."
                 )
                 st.rerun()
             except Exception as e:
@@ -95,29 +94,29 @@ def list_documents() -> list[dict]:
         return []
 
 
-@st.dialog("Dokument entfernen")
+@st.dialog("Confirm Delete Document")
 def confirm_delete_document(
     record_id: str,
     document_name: str | None = None,
     original_name: str | None = None,
 ) -> bool:
     """Show a confirmation dialog to delete a document, and if confirmed, proceed to remove it."""
-    st.warning("Möchtest du dieses Dokument wirklich entfernen?")
+    st.warning("Do you really want to delete this document?")
     if original_name or document_name:
-        st.caption(f"Datei: {original_name or document_name}")
+        st.caption(f"File: {original_name or document_name}")
     col1, col2 = st.columns(2, gap="small")
     with col1:
-        if st.button("Ja, entfernen", use_container_width=True):
+        if st.button("Yes, delete", use_container_width=True):
             ok = delete_document(
                 record_id=record_id,
                 document_name=document_name,
                 original_name=original_name,
             )
             if ok:
-                st.session_state["upload_success_msg"] = "Dokument entfernt."
+                st.session_state["upload_success_msg"] = "Document deleted."
             st.rerun()
     with col2:
-        if st.button("Abbrechen", use_container_width=True):
+        if st.button("Cancel", use_container_width=True):
             st.rerun()
     return False
 
@@ -140,7 +139,7 @@ def delete_document(
                 try:
                     path.unlink()
                 except Exception as e:
-                    st.warning(f"Konnte Datei {name} nicht löschen: {e}")
+                    st.warning(f"Could not delete file {name}: {e}")
     return processed
 
 
@@ -253,14 +252,14 @@ def update_document(
 
         if identical:
             st.info(
-                "Die hochgeladene Datei ist inhaltlich identisch. Update nicht möglich."
+                "The uploaded file is identical in content. Update not possible."
             )
         else:
-            with st.expander("Änderungen anzeigen"):
-                st.code(diff_text or "Kein Diff erzeugt.", language="diff")
+            with st.expander("Show Changes"):
+                st.code(diff_text or "No diff generated.", language="diff")
 
     confirm_update = st.checkbox(
-        "Update erlauben (Bitte Änderungen prüfen und bestätigen)",
+        "Allow update (Please review and confirm changes)",
         value=False,
         disabled=identical or not uploaded_file,
     )
@@ -279,7 +278,7 @@ def update_document(
     changed = title_changed or ids_changed or bool(uploaded_file)
 
     if not changed:
-        st.info("Keine Änderungen erkannt. Update ist deaktiviert.")
+        st.info("No changes detected. Update is disabled.")
 
     update_disabled = (
         (not changed)
@@ -290,7 +289,7 @@ def update_document(
     if st.button("Update", disabled=update_disabled):
         if uploaded_file and (identical or not confirm_update):
             st.warning(
-                "Update abgebrochen. Ihr Dokument ist inhaltlich identisch oder die Änderungen wurden nicht bestätigt."
+                "Update aborted. Your document is identical in content or changes were not confirmed."
             )
             return False
 
@@ -343,7 +342,7 @@ def update_document(
                 with open(local_path, "rb") as src, open(dest_path, "wb") as dst:
                     dst.write(src.read())
 
-            st.session_state["upload_success_msg"] = "Dokument aktualisiert."
+            st.session_state["upload_success_msg"] = "Document updated."
             st.rerun()
         except Exception as e:
             st.error(f"Failed to update document: {e}")
@@ -372,27 +371,27 @@ def show_version_list(
 
     if backup_files:
         st.divider()
-        st.subheader("Vorherige Versionen")
+        st.subheader("Previous Versions")
         table_rows = []
         for p, ver, orig in backup_files:
             table_rows.append(
                 {
                     "Version": f"v{ver}",
-                    "Dateiname": orig,
-                    "Backup-Datei": p.name,
-                    "Datum": datetime.fromtimestamp(p.stat().st_mtime).strftime(
+                    "Filename": orig,
+                    "Backup File": p.name,
+                    "Date": datetime.fromtimestamp(p.stat().st_mtime).strftime(
                         "%d.%m.%Y %H:%M"
                     ),
                 }
             )
         st.dataframe(table_rows, use_container_width=True)
 
-        st.subheader("Vorherige Version wiederherstellen")
+        st.subheader("Restore Previous Version")
         options = [f"v{ver} – {orig} ({p.name})" for p, ver, orig in backup_files]
         idx = st.selectbox(
-            "Backup auswählen", range(len(options)), format_func=lambda i: options[i]
+            "Select Backup", range(len(options)), format_func=lambda i: options[i]
         )
-        if st.button("Ausgewählte Version wiederherstellen"):
+        if st.button("Restore Selected Version"):
             selected_path, selected_version, selected_original = backup_files[idx]
 
             if existing_path and existing_path.exists():
@@ -417,8 +416,27 @@ def show_version_list(
                     ),
                 }
                 client.collection("documents").update(record_id, payload)
-                st.session_state["upload_success_msg"] = "Version wiederhergestellt."
+                st.session_state["upload_success_msg"] = "Version restored."
                 st.rerun()
             except Exception as e:
-                st.error(f"Fehler bei Wiederherstellung: {e}")
+                st.error(f"Error restoring version: {e}")
                 return False
+
+
+@st.dialog("Show PDF")
+def view_pdf_dialog(
+    document_name: str | None = None,
+    original_name: str | None = None,
+) -> None:
+    """Redirect to a full page PDF view."""
+    name = original_name or document_name
+    if not name:
+        st.error("No file found.")
+        return
+
+    if Path(name).suffix.lower() != ".pdf":
+        st.info("Only PDF files can be displayed.")
+        return
+
+    st.session_state["pdf_view_name"] = name
+    st.switch_page("pages/views/pdf_view.py")
