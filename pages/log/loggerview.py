@@ -9,7 +9,6 @@ st.title("Logdateien")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 log_files = sorted(LOG_DIR.glob("*.log"), reverse=True)
 
-
 @st.dialog("Logdatei löschen")
 def confirm_delete():
     st.warning(f"Willst du {selected} wirklich löschen?")
@@ -28,20 +27,20 @@ def confirm_delete():
 if not log_files:
     st.info("Keine Logdateien gefunden.")
 else:
-    file_names = [f.name for f in log_files]
-    selected = st.selectbox("Logdatei auswählen", file_names)
+    file_names: list[str] = [f.name for f in log_files]
+    selected: str = st.selectbox("Logdatei auswählen", file_names)
 
-    selected_path = LOG_DIR / selected
-    content = selected_path.read_text(encoding="utf-8")
+    selected_path: Path = LOG_DIR / selected
+    content: str = selected_path.read_text(encoding="utf-8")
 
     st.subheader(f"Inhalt: {selected}")
 
     def _color_line(line: str) -> str:
-        # Erwartetes Format: [YYYY-MM-DD HH:MM:SS] [LEVEL] Message
+        #Expected formatting: [YYYY-MM-DD HH:MM:SS] [LEVEL] Message
         try:
-            ts_part, rest = line.split("] ", 1)
-            level_part, msg = rest.split("] ", 1)
-            ts = ts_part.strip("[]")
+            timestamp_part, rest = line.split("] ", 1)
+            level_part, message = rest.split("] ", 1)
+            timestamp = timestamp_part.strip("[]")
             level = level_part.strip("[]")
 
             level_color = {
@@ -51,9 +50,9 @@ else:
             }.get(level, "#E0E0E0")
 
             return (
-                f"<span style='color:#9E9E9E'>[{ts}]</span> "
+                f"<span style='color:#9E9E9E'>[{timestamp}]</span> "
                 f"<span style='color:{level_color}; font-weight:600'>[{level}]</span> "
-                f"<span style='color:#FFFFFF'>{msg}</span>"
+                f"<span style='color:#FFFFFF'>{message}</span>"
             )
         except ValueError:
             return f"<span style='color:#FFFFFF'>{line}</span>"
