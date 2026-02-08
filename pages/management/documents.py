@@ -4,6 +4,7 @@ from extensions.documentupload import (
     list_documents,
     delete_document,
     update_document,
+    confirm_delete_document,
 )
 
 st.set_page_config(page_title="Document Management", layout="wide")
@@ -20,9 +21,9 @@ if st.button("Upload New Document"):
 # Show existing documents
 docs = list_documents()
 if docs:
-    columns = [2, 1, 2, 3, 1, 1, 0.5, 0.5]
+    columns = [2, 1, 2, 3, 1, 1, 1, 1]
 
-    cols = st.columns(columns)
+    cols = st.columns(columns, gap="small")
     cols[0].markdown("**Title**")
     cols[1].markdown("**Version**")
     cols[2].markdown("**Needed IDs**")
@@ -35,7 +36,7 @@ if docs:
     st.divider()
 
     for doc in docs:
-        cols = st.columns(columns)
+        cols = st.columns(columns, gap="small")
         # Title
         cols[0].markdown(f"**{doc.get('title','')}**")
 
@@ -46,7 +47,7 @@ if docs:
         cols[2].markdown(", ".join(doc.get("needed_id", [])) or "\-")
 
         # Document
-        cols[3].markdown(f"{doc.get('document','')}")
+        cols[3].markdown(f"{doc.get('original_name','')}")
 
         # Created
         cols[4].markdown(f"{doc.get('created','')}")
@@ -55,18 +56,21 @@ if docs:
         cols[5].markdown(f"{doc.get('updated','')}")
 
         # Edit
-        if cols[6].button("✏️ Edit", key=f"edit-{doc['id']}"):
+        if cols[6].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
             update_document(
                 record_id=doc["id"],
                 title=doc.get("title"),
                 version=doc.get("version") + 1,
                 needed_id=doc.get("needed_id"),
+                original_name=doc.get("original_name"),
+                document_name=doc.get("document"),
+                current_version=doc.get("version"),
             )
 
         # Delete
-        if cols[7].button("🗑️ Delete", key=f"del-{doc['id']}"):
-            if delete_document(
-                doc["id"],
+        if cols[7].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
+            if confirm_delete_document(
+                record_id=doc["id"],
                 document_name=doc.get("document"),
                 original_name=doc.get("original_name"),
             ):
@@ -77,6 +81,4 @@ if docs:
 else:
     st.info("Keine Dokumente vorhanden.")
 
-# TODO: Wenn ein Dokument aktualisiert wird, wird geprüft, ob der Dateiname geändert wurde. Dieser muss identisch zum vorherhigen Dateinamen bleiben. 
-# TODO: Wenn ein Dokument aktualisiert wird, darf die Versionsnummer nicht manuell geändert werden, sondern muss automatisch um 1 erhöht werden.
 # TODO: Tests schreiben für documentupload.py Funktionen: upload_document, list_documents, delete_document, update_document
