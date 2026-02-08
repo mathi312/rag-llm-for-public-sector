@@ -1,4 +1,5 @@
 streamlit
+streamlit-pdf
 langchain==0.3.7
 langchain-community==0.3.7
 langchain-core==0.3.21
