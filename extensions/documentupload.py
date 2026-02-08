@@ -37,7 +37,7 @@ def upload_document():
     identical = False
     file_bytes = None
 
-    # NEW: check immediately after file selection
+    # Check for identical or similar documents before allowing upload, to prevent duplicates and provide user feedback on potential matches.
     if uploaded_file:
         file_bytes = uploaded_file.getvalue()
         temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
@@ -45,6 +45,7 @@ def upload_document():
         data_dir.mkdir(parents=True, exist_ok=True)
 
         try:
+            # Save the uploaded file to a temporary location for comparison
             with open(temp_file_path, "wb") as temp_file:
                 temp_file.write(file_bytes)
 
@@ -65,6 +66,7 @@ def upload_document():
                 with st.expander("Show diff"):
                     st.code(diff or "No diff available.", language="diff")
         finally:
+            # Cleanup temp file
             if temp_file_path.exists():
                 temp_file_path.unlink()
 
@@ -216,18 +218,21 @@ def compare_with_existing_documents(
     data_dir: Path,
     similarity_threshold: float = 0.85,
 ) -> tuple[bool, tuple[Path, float, str] | None]:
-    """Return (is_identical, similar_info)."""
+    """
+    Compare the content of a new document with existing documents in the data directory,
+    returning whether an identical match was found and the best similar match if not.
+    """
     new_text = extract_text_from_file(new_file_path).strip()
     if not new_text:
         return False, None
 
     best_match: tuple[Path, float, str] | None = None
 
-    for p in data_dir.iterdir():
-        if not p.is_file() or p.suffix.lower() not in {".pdf", ".docx"}:
+    for path in data_dir.iterdir():
+        if not path.is_file() or path.suffix.lower() not in {".pdf", ".docx"}:
             continue
 
-        old_text = extract_text_from_file(p).strip()
+        old_text = extract_text_from_file(path).strip()
         if not old_text:
             continue
 
@@ -235,15 +240,17 @@ def compare_with_existing_documents(
             return True, None
 
         ratio = difflib.SequenceMatcher(None, old_text, new_text).ratio()
+        # If the similarity ratio exceeds the threshold, we consider it a similar document and prepare a diff for user review.
         if ratio >= similarity_threshold:
             diff = build_diff(
                 old_text,
                 new_text,
-                fromfile=f"ALT: {p.name}",
+                fromfile=f"ALT: {path.name}",
                 tofile=f"NEU: {new_file_path.name}",
             )
+            # Keep track of the best match (highest similarity ratio) for potential user feedback
             if best_match is None or ratio > best_match[1]:
-                best_match = (p, ratio, diff)
+                best_match = (path, ratio, diff)
 
     return False, best_match
 
