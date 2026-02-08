@@ -6,15 +6,12 @@ from pocketbase import PocketBase
 from pocketbase.client import FileUpload
 import streamlit as st
 import difflib
-from typing import Tuple
 from pypdf import PdfReader
 import docx2txt
 import shutil
 import re
 from datetime import datetime
 
-
-# def upload_document(file_path: str) -> FileUpload:
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
