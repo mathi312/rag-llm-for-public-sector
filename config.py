@@ -18,3 +18,6 @@ CHUNK_SIZE = 1000
 
 # Number of overlapping characters between consecutive chunks.
 CHUNK_OVERLAP = 200
+
+# Directory for storing log files.
+LOG_DIR = BASE_DIR / "logs"

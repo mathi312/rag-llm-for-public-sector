@@ -20,6 +20,10 @@ if not is_authenticated():
     ]
 
 if is_authenticated():
+    pages["Logs"] = [st.Page("pages/log/loggerview.py", title="Logs")]
+
+
+if is_authenticated():
     _, btn_col = st.columns([6, 1])
     with btn_col:
         st.button("Logout", on_click=on_logout, type="primary")

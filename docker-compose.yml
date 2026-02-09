@@ -40,6 +40,7 @@ services:
       - ./faiss_index:/app/faiss_index
       # Mount local 'data' folder for static file ingestion
       - ./data:/app/data
+      - ./logs:/app/logs
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - POCKETBASE_URL=http://pocketbase:8080

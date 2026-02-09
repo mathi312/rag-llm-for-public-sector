@@ -4,9 +4,11 @@ import json
 from extensions.pocketbase import *
 from extensions.pocketbase_messages import PBError, PBWarning, PBSuccess
 from extensions.user import User
-from datetime import datetime, timedelta
+from extensions.logger import Logger
 
 st.set_page_config(page_title="Login", layout="centered")
+
+logger = Logger()
 
 st.title("Login")
 st.caption("Enter your credentials below.")
@@ -37,6 +39,9 @@ with st.form("login_form"):
                         "token": auth_result.token,
                         "model": auth_result.record,
                     }
+
+                logger.log_info(f"User '{user.email}' logged in successfully.")
+
                 st.success(PBSuccess.AUTHENTICATION_SUCCESS.value)
                 st.switch_page("pages/ragllm.py")
             else:

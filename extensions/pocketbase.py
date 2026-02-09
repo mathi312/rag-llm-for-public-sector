@@ -3,6 +3,9 @@ import streamlit as st
 from pocketbase import PocketBase
 from extensions.pocketbase_messages import PBError, PBInfo
 from extensions.user import User
+from extensions.logger import Logger
+
+logger = Logger()
 
 def get_pocketbase_client():
     use_fake = os.getenv("MOCK_POCKETBASE", "false").lower() == "true"
@@ -47,6 +50,8 @@ def authenticate_user(email: str, password: str) -> dict | str:
 
 def logout_user() -> None:
     """Logout the current authenticated user."""
+    current_user = get_user_from_auth_store()
+    logger.log_info(f"User '{current_user.email if current_user else 'Unknown'}' logged out successfully.")
     client.auth_store.clear()
     st.session_state.pop("pb_auth", None)
     st.session_state.pop("user", None)
