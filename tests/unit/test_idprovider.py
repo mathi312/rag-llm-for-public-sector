@@ -1,5 +1,13 @@
 import pytest
-from extensions.idprovider import map_id_fields, IdType
+import io
+import numpy as np
+
+from PIL import Image
+from unittest.mock import patch, MagicMock
+
+from extensions.idprovider import *
+from extensions.idprovider import _get_reader, _preprocess_image_for_ocr, _run_ocr_easyocr
+
 
 """
 Unit-Tests with pytest for the ID field mapping functionality.
@@ -184,3 +192,97 @@ def test_map_id_fields_not_enough_lines():
     """Test that an IndexError is raised when there are not enough lines."""
     with pytest.raises(IndexError):
         map_id_fields(IdType.ID_CARD, ["only", "two"])
+
+@patch("extensions.idprovider.Reader", autospec=True)
+def test_get_reader_is_cached(mock_reader):
+    r1 = _get_reader(gpu=False)
+    r2 = _get_reader(gpu=False)
+
+    assert r1 is r2
+    mock_reader.assert_called_once_with(["de", "en"], gpu=False)
+
+def test_preprocess_image_no_resize():
+    img = Image.new("RGB", (1000, 800))
+    out = _preprocess_image_for_ocr(img, max_dim=2000)
+
+    assert out.size == img.size
+
+def test_preprocess_image_resizes_large_image():
+    img = Image.new("RGB", (4000, 2000))
+    out = _preprocess_image_for_ocr(img, max_dim=2000)
+
+    assert out.size == (2000, 1000)
+
+@patch("extensions.idprovider._get_reader")
+@patch("extensions.idprovider._preprocess_image_for_ocr")
+def test_run_ocr_easyocr(mock_preprocess_image, mock_get_reader):
+    img = Image.new("RGB", (100, 100))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    image_bytes = buf.getvalue()
+
+    mock_reader = MagicMock()
+    mock_reader.readtext.return_value = ["LINE ONE", "LINE TWO"]
+
+    mock_get_reader.return_value = mock_reader
+    mock_preprocess_image.side_effect = lambda x: x
+
+    result = _run_ocr_easyocr(image_bytes)
+
+    assert result == "LINE ONE\nLINE TWO"
+    mock_reader.readtext.assert_called_once()
+    args, kwargs = mock_reader.readtext.call_args
+    assert isinstance(args[0], np.ndarray)
+    assert kwargs["detail"] == 0
+    assert kwargs["paragraph"] is False
+
+def test_detect_id_type_id_card():
+    lines = ["Bundesrepublik Deutschland", "Personalausweis"]
+    assert detect_id_type_from_text(lines) == IdType.ID_CARD
+
+def test_detect_id_type_passport():
+    lines = ["EUROPEAN UNION", "Passport"]
+    assert detect_id_type_from_text(lines) == IdType.PASSPORT
+
+def test_detect_id_type_residence_permit():
+    lines = ["Aufenthaltstitel"]
+    assert detect_id_type_from_text(lines) == IdType.RESIDENCE_PERMIT
+
+def test_detect_id_type_raises():
+    with pytest.raises(ValueError):
+        detect_id_type_from_text(["Random text", "Nothing useful"])
+
+def test_is_close_match_exact():
+    assert is_close_match("PERSONALAUSWEIS", "PERSONALAUSWEIS")
+
+def test_is_close_match_approximate():
+    assert is_close_match("PERS0NALAUSWE1S", "PERSONALAUSWEIS", threshold=0.6)
+
+def test_is_close_match_false():
+    assert not is_close_match("HELLO WORLD", "PASSPORT")
+
+@patch("extensions.idprovider._run_ocr_easyocr")
+@patch("extensions.idprovider.map_id_fields")
+def test_process_id_document_detects_type(mock_map_id_fields, mock_run_easyocr):
+    mock_run_easyocr.return_value = "PERSONALAUSWEIS\nMUSTERMANN\nERIKA"
+    mock_map_id_fields.return_value = {"first_name": "ERIKA", "last_name": "MUSTERMANN"}
+
+    result = process_id_document(b"fake-bytes")
+
+    assert result["id_type"] == IdType.ID_CARD
+    assert result["first_name"] == "ERIKA"
+    assert result["last_name"] == "MUSTERMANN"
+    assert "PERSONALAUSWEIS" in result["raw_text"]
+
+@patch("extensions.idprovider._run_ocr_easyocr")
+@patch("extensions.idprovider.map_id_fields")
+def test_process_id_document_with_explicit_id_type(mock_map_id_fields, mock_run_easyocr):
+    mock_run_easyocr.return_value = "REISEPASS\nDOE\nJOHN"
+    mock_map_id_fields.return_value = {"first_name": "JOHN", "last_name": "DOE"}
+
+    result = process_id_document(
+        b"fake-bytes",
+        id_type=IdType.PASSPORT
+    )
+
+    assert result["id_type"] == IdType.PASSPORT
