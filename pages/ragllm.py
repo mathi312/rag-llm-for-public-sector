@@ -16,6 +16,7 @@ from chat import create_rag_chain, answer_question
 import time
 
 from extensions.report_generator import *
+from extensions.report import Report
 from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
