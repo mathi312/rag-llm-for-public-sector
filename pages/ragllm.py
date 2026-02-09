@@ -64,6 +64,43 @@ def add_url():
         st.session_state.urls.append(url)
     st.session_state.url_input = ""
 
+# helper to handle the upload of an id
+def handle_id_upload(id_image, id_type: IdType | None = None):
+    # rewind to start of file, needed when trying to process the image a second time
+    id_image.seek(0)
+
+    extracted_data = process_id_document(
+        id_image.read(),
+        id_type=id_type
+    )
+    st.session_state["id_uploaded"] = True
+
+    st.session_state["id_document"] = {
+        "type": extracted_data.get("id_type").value,
+        "data": extracted_data,
+    }
+
+# Dialog for manually selecting id type after ocr failed to get the id type from the uploaded id
+@st.dialog("Manually select your id type")
+def select_id_type_dialog(id_image, exception: str):
+    st.error(exception)
+    st.write("Please manually select the ID type you provided.")
+
+    selected_id_type = st.selectbox(
+        "Select Citizen ID",
+        options=list(IdType),
+        index=0,
+        format_func=lambda x: x.value
+    )
+
+    if st.button("Process ID Document Again"):
+        try:
+            handle_id_upload(id_image, selected_id_type)
+
+            st.success("ID Document successfully processed!")
+        except Exception as exc:
+            st.error(f"OCR processing failed: {exc}")
+
 # --- SIDEBAR UI ---
 with st.sidebar:
     st.header("Current User")
@@ -160,32 +197,27 @@ with st.sidebar:
         # Citizen ID Upload Section
         st.header("Citizen ID Upload")
 
-        citizen_id = st.selectbox("Select Citizen ID", ["ID Card", "Passport", "Residence Permit"], index=0)
         id_image = st.file_uploader("Upload ID image", type=["png", "jpg", "jpeg"]) # Upload ID image
 
         upload_citizen_file = st.button("Upload Citizen ID Document")
 
         if upload_citizen_file:
-                if not id_image:
-                    st.warning("Please upload an image of your ID before proceeding.")
-                else:
-                    try:
-                        extracted_data = process_id_document(id_image.read(), citizen_id)
+            if not id_image:
+                st.warning("Please upload an image of your ID before proceeding.")
+            else:
+                try:
+                    handle_id_upload(id_image)
 
-                        st.session_state["id_document"] = {
-                            "type": citizen_id,
-                            "data": extracted_data,
-                        }
-                        st.session_state["id_uploaded"] = True
+                    msg = st.empty()
+                    msg.success(f"{st.session_state.get("id_document").get("type")} document uploaded successfully!")
+                    time.sleep(2)
+                    msg.empty()
 
-                        msg = st.empty()
-                        msg.success(f"{citizen_id} document uploaded successfully!")
-                        time.sleep(2)
-                        msg.empty()
-
-                        st.text("ID Document successfully processed!")
-                    except Exception as exc:
-                        st.error(f"OCR processing failed: {exc}")
+                    st.success("ID Document successfully processed!")
+                except ValueError as exc:
+                    select_id_type_dialog(id_image, exc)
+                except Exception as exc:
+                    st.error(f"OCR processing failed: {exc}")
 
         st.divider()
 

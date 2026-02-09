@@ -6,12 +6,19 @@ It includes functions to map OCR-extracted text lines to structured ID fields.
 
 import io
 import re
+import numpy as np
+import difflib
+
 from functools import lru_cache
 from typing import Dict, List, Optional
 from PIL import Image, ImageOps, ImageEnhance, ImageFilter
-import numpy as np
+from enum import Enum, auto
 from easyocr import Reader
 
+class IdType(Enum):
+    ID_CARD = "ID Card"
+    PASSPORT = "Passport"
+    RESIDENCE_PERMIT = "Residence Permit"
 
 # Define field patterns for different ID types
 FIELD_PATTERNS: Dict[str, Dict[str, str]] = {
@@ -49,13 +56,12 @@ FIELD_PATTERNS: Dict[str, Dict[str, str]] = {
     },
 }
 
-
-def map_id_fields(id_type: str, lines: List[str]) -> Dict[str, str]:
+def map_id_fields(id_type: IdType, lines: List[str]) -> Dict[str, str]:
     """Maps OCR lines to ID fields based on the ID type."""
     patterns = FIELD_PATTERNS.get(id_type, {})
     mapped: Dict[str, str] = {k: "" for k in patterns.keys()}
 
-    if id_type == "ID Card":
+    if id_type == IdType.ID_CARD:
         mapped["id_card_number"] = mapped.get("id_card_number", "") or lines[1].strip().replace(" ", "")
         mapped["id_card_name"] = mapped.get("id_card_name", "") or lines[9].strip()[3:]
         mapped["id_card_birth_name"] = mapped.get("id_card_birth_name", "") or lines[10].strip()[3:]
@@ -65,7 +71,7 @@ def map_id_fields(id_type: str, lines: List[str]) -> Dict[str, str]:
         mapped["id_card_nationality"] = mapped.get("id_card_nationality", "") or lines[20].strip()
         mapped["id_card_date_of_expiry"] = mapped.get("id_card_date_of_expiry", "") or lines[25].strip() + "." + lines[26].strip().replace(" ", "")
 
-    if id_type == "Passport":
+    if id_type == IdType.PASSPORT:
         mapped["passport_number"] = mapped.get("passport_number", "") or lines[14].upper().strip().replace(" ", "").replace("O", "0")
         mapped["passport_last_name"] = mapped.get("passport_last_name", "") or lines[21].strip()
         mapped["passport_birth_name"] = mapped.get("passport_birth_name", "") or lines[22].strip()
@@ -77,7 +83,7 @@ def map_id_fields(id_type: str, lines: List[str]) -> Dict[str, str]:
         mapped["passport_date_of_expiry"] = mapped.get("passport_date_of_expiry", "") or lines[53].strip()
         mapped["passport_authority"] = mapped.get("passport_authority", "") or lines[58].strip()
 
-    if id_type == "Residence permit":
+    if id_type == IdType.RESIDENCE_PERMIT:
         mapped["residence_permit_number"] = mapped.get("residence_permit_number", "") or lines[1].strip().replace(" ", "")
         mapped["residence_permit_last_name"] = mapped.get("residence_permit_name", "") or lines[4].strip()
         mapped["residence_permit_first_name"] = mapped.get("residence_permit_birth_name", "") or lines[5].strip()
@@ -120,12 +126,38 @@ def _run_ocr_easyocr(image_bytes: bytes) -> str:
     return "\n".join(lines) # Join lines into a single string
 
 
-def process_id_document(file_bytes: bytes, id_type: str) -> Dict[str, str]:
+def process_id_document(file_bytes: bytes, id_type: IdType | None = None) -> Dict[str, str]:
     """Processes an ID document image and extracts relevant fields using OCR."""
     raw_text = _run_ocr_easyocr(file_bytes)
     lines = [ln for ln in raw_text.splitlines() if ln.strip()] # Filter out empty lines
+
+    if id_type is None:
+        id_type = detect_id_type_from_text(lines)
+
     result = map_id_fields(id_type, lines)
+
     return {
         **result,
+        "id_type": id_type,
         "raw_text": raw_text.strip(),
     }
+
+def detect_id_type_from_text(lines: list[str]) -> IdType:
+    """Detects the ID type from OCR-extracted text."""
+    for line in lines:
+        line = line.upper()
+
+        if is_close_match(line, "PERSONALAUSWEIS"):
+            return IdType.ID_CARD
+        elif is_close_match(line, "REISEPASS") or is_close_match(line, "PASSPORT"):
+            return IdType.PASSPORT
+        elif is_close_match(line, "AUFENTHALTSTITEL"):
+            return IdType.RESIDENCE_PERMIT
+    
+    raise ValueError("Unable to detect ID type from Provided ID Document")
+
+def is_close_match(text: str, keyword: str, threshold: float = 0.75) -> bool:
+    """Returns True if the keyword approximately appears in the text,
+    tolerating OCR errors based on the given similarity threshold."""
+    matches = difflib.get_close_matches(keyword, [text], cutoff=threshold)
+    return bool(matches)
