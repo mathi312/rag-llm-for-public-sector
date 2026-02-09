@@ -21,7 +21,10 @@ if not is_authenticated():
 
 if is_authenticated():
     pages["Logs"] = [st.Page("pages/log/loggerview.py", title="Logs")]
-
+    pages["Documentmanager"] = [
+        st.Page("pages/management/documents.py", title="Document Manager"),
+        st.Page("pages/views/pdf_view.py", title="PDF View"),
+    ]
 
 if is_authenticated():
     _, btn_col = st.columns([6, 1])
