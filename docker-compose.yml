@@ -92,6 +92,9 @@ services:
     environment:
       - PYTHONPATH=/app
       - BASE_URL=http://rag-app:8501
+      - POCKETBASE_URL=http://pocketbase:8080
+      - POCKETBASE_ADMIN_USERNAME=${POCKETBASE_ADMIN_USERNAME}
+      - POCKETBASE_ADMIN_PASSWORD=${POCKETBASE_ADMIN_PASSWORD}
     working_dir: /app
     volumes:
       - ./:/app

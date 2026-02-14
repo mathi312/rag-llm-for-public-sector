@@ -184,7 +184,7 @@ Type in this command to run the tests:
 
 Enter these commands to run the end-to-end integration tests:
 
-    MOCK_POCKETBASE=true docker compose up -d
+    docker compose up -d
 
     docker compose --profile integration-test run --rm rag-app-integration-test
 
