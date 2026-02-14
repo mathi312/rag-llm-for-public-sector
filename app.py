@@ -4,11 +4,6 @@ from extensions.pocketbase import is_authenticated, logout_user, restore_session
 # Initialize authentication session
 restore_session()
 
-
-def on_logout() -> None:
-    logout_user()
-
-
 # Define the pages
 pages: dict[str, list[st.Page]] = {}
 
@@ -25,11 +20,6 @@ if is_authenticated():
         st.Page("pages/management/documents.py", title="Document Manager"),
         st.Page("pages/views/pdf_view.py", title="PDF View"),
     ]
-
-if is_authenticated():
-    _, btn_col = st.columns([6, 1])
-    with btn_col:
-        st.button("Logout", on_click=on_logout, type="primary")
 
 page_navigation = st.navigation(pages, position="top")
 page_navigation.run()
