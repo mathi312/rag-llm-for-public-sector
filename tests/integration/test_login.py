@@ -95,17 +95,13 @@ def test_login_success(page, navigate_to_login_page, seed_test_user):
     """Test user login and logout"""
     login(page, "testuser@testuser.de", "12345678")
 
-    # wait for page to load, more determinstic solution than using networkidle
-    page.get_by_role("heading", name="🤖 Digital Assistant - RAG-LLM (Hybrid)").wait_for(state="visible")
+    expect(page.get_by_test_id("stSidebarUserContent").get_by_role("link")).to_contain_text("testuser@testuser.de")
+    page.locator("summary").filter(has_text="testuser@testuser").click()
 
-    logged_in_label = page.get_by_text(
-        "Logged in as:", exact=False
-    )
-    expect(logged_in_label).to_be_visible()
+    expect(page.get_by_text("Role: Admin")).to_be_visible()
 
-    logout_button = page.get_by_test_id("stBaseButton-primary")
-    expect(logout_button).to_be_visible()
-    logout_button.click()
+    expect(page.get_by_test_id("stBaseButton-primary")).to_be_visible()
+    page.get_by_test_id("stBaseButton-primary").click()
 
     # Assert logout worked
-    expect(page.get_by_test_id("stToolbar").get_by_text("User").first).to_be_visible()
+    expect(page.get_by_test_id("stToolbar").get_by_text("User")).to_be_visible()
