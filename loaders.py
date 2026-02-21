@@ -23,8 +23,6 @@ from langchain_core.documents import Document
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP
 
-from extensions.documentupload import list_documents
-
 
 def load_files_to_documents(uploaded_files) -> List[Document]:
     """Convert uploaded Streamlit file objects into LangChain Documents.
@@ -103,6 +101,8 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         # Mapping: Dateiname -> benötigte Ausweisarten
     needed_id_map: dict[str, list[str]] = {}
     try:
+        from extensions.documentupload import list_documents
+
         for rec in list_documents():
             ids = rec.get("needed_id") or []
             original_name = rec.get("original_name")
@@ -126,6 +126,8 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
                 loader = PyPDFLoader(str(file_path))
             elif filename.endswith(".docx"):
                 loader = Docx2txtLoader(str(file_path))
+            else:
+                continue
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
             continue
