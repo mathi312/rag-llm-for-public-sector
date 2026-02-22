@@ -6,6 +6,7 @@ from extensions.documentupload import (
     confirm_delete_document,
     view_pdf_dialog
 )
+from extensions.question_generator import generate_example_questions
 
 st.set_page_config(page_title="Document Management", layout="wide")
 
@@ -55,6 +56,10 @@ if docs:
 
         # Updated
         cols[5].markdown(f"{doc.get('updated','')}")
+
+        # generate example questions
+        if cols[6].button("generate questions", key=f"generate-{doc['id']}", use_container_width=True):
+            generate_example_questions(document_name=doc.get("document"))
 
         # View
         if cols[6].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
