@@ -7,6 +7,7 @@ from extensions.documentupload import (
     view_pdf_dialog
 )
 from extensions.question_generator import generate_example_questions
+from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
 
@@ -22,7 +23,7 @@ if st.button("Upload New Document"):
 # Show existing documents
 docs = list_documents()
 if docs:
-    columns = [2, 1, 2, 3, 1, 1, 1, 1, 1]
+    columns = [2, 1, 2, 3, 1, 1, 1, 1, 1, 1]
 
     cols = st.columns(columns, gap="small")
     cols[0].markdown("**Title**")
@@ -34,6 +35,7 @@ if docs:
     cols[6].markdown("**Actions**")
     cols[7].markdown("")
     cols[8].markdown("")
+    cols[9].markdown("")
 
     st.divider()
 
@@ -58,18 +60,28 @@ if docs:
         cols[5].markdown(f"{doc.get('updated','')}")
 
         # generate example questions
-        if cols[6].button("generate questions", key=f"generate-{doc['id']}", use_container_width=True):
-            generate_example_questions(document_name=doc.get("document"))
+        if cols[6].button("Generate questions", key=f"generate-{doc['id']}", use_container_width=True):
+            try:
+                questions = generate_example_questions(
+                    document_name=doc.get("original_name"),
+                    provider=st.session_state.provider,
+                    model_name=st.session_state.selected_model
+                )
+                show_questions_dialog(questions)
+            except FileNotFoundError as e:
+                st.error(f"Could not find document: {doc}")
+            except Exception as e:
+                st.exception(e)
 
         # View
-        if cols[6].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
+        if cols[7].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
             view_pdf_dialog(
                 document_name=doc.get("document"),
                 original_name=doc.get("original_name"),
             )
 
         # Edit
-        if cols[7].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
+        if cols[8].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
             update_document(
                 record_id=doc["id"],
                 title=doc.get("title"),
@@ -81,7 +93,7 @@ if docs:
             )
 
         # Delete
-        if cols[8].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
+        if cols[9].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
             if confirm_delete_document(
                 record_id=doc["id"],
                 document_name=doc.get("document"),

@@ -27,3 +27,6 @@ class PBInfo(Enum):
     NOT_AUTHENTICATED: str = "Not authenticated"
     LOGGED_IN: str = "Logged in as:"
     UNKNOWN_USER: str = "Unknown User"
+
+class PBSaveError(Enum):
+    """Error messages for PocketBase save operations."""
