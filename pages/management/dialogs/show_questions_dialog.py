@@ -2,7 +2,7 @@ from typing import List
 
 import streamlit as st
 
-from extensions.question_generator import save_questions_to_pb
+from extensions.question_controller import save_questions
 
 
 @st.dialog("Review Generated Questions")
@@ -33,7 +33,7 @@ def show_questions_dialog(generated_questions: List[str]):
             return
 
         try:
-            save_questions_to_pb(to_save)
+            save_questions(to_save)
             st.success("Successfully saved questions!")
             # clear seesion state
             del st.session_state.questions
