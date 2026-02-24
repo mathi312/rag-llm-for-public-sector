@@ -107,5 +107,6 @@ def answer_question(
 
     if report is not None:
         report.add_entry(question, answer)
+        report.add_id_type(id_document.get('type') if id_uploaded else "None")
 
     return answer, sources
