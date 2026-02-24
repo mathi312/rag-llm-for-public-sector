@@ -9,14 +9,14 @@ class Report:
     """The report that contains the chat history of the current session and the llm used."""
     llm: str
     chat_history: Dict[str, str]
-    id_type: str
+    id_type: str | None
     timezone: str = "Europe/Berlin"
 
     def __init__(self, llm: str):
         """Initialize a report for a given LLM."""
         self.llm: str = llm
         self.chat_history: Dict[str, str] = {}
-        self.id_type: str = None
+        self.id_type: str | None = None
 
     def timestamp(self) -> str:
         """Return the current timestamp formatted for the report."""
@@ -26,7 +26,7 @@ class Report:
         """Adds the question and the answer to the chat history."""
         self.chat_history[question] = answer
 
-    def add_id_type(self, id_type: str) -> None:
+    def add_id_type(self, id_type: str | None) -> None:
         """Adds the type of ID provided to the chat history."""
         self.id_type = id_type        
 
@@ -54,7 +54,7 @@ class Report:
             pdf.cell(90, 8, f"Email: {user.email}", ln=False)
             pdf.cell(0, 8, f"Admin: {'Yes' if is_admin else 'No'}", ln=True)
         
-        if self.id_type is not None:
+        if self.id_type is not None and self.id_type != "None":
             pdf.cell(0, 8, f"ID provided: {self.id_type}", ln=True)
         else:
             pdf.cell(0, 8, f"No ID provided", ln=True)
