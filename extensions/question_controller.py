@@ -1,11 +1,12 @@
 from extensions.question_repository import QuestionRepository
 from extensions.question_service import QuestionService
+from extensions.question import Question
 
 
 repo = QuestionRepository()
 service = QuestionService(repo)
 
-def get_questions(random: bool = False) -> list[str]:
+def get_questions(random: bool = False) -> list[Question]:
     """
     Api to retrieve the saved questions.
 

@@ -10,7 +10,7 @@ class Question:
     question: str
 
     @classmethod
-    def from_pb_record(cls, record: dict) -> Self:
+    def from_pb_record(cls, record) -> Self:
         """
         Creates a Question class from a pocketbase record.
         """

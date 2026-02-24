@@ -24,23 +24,29 @@ from extensions.documentupload import upload_document
 from extensions.question_controller import get_questions, update_times_asked_of_question
 
 
-if "questions" not in st.session_state:
-    st.session_state.questions = get_questions()
+if "example_questions" not in st.session_state:
+    try:
+        st.session_state.example_questions = get_questions()
+    except Exception as e:
+        pass
 
 def refresh_questions():
-    st.session_state.questions = get_questions(True)
-    st.session_state.hide_suggestions = False
+    try:
+        st.session_state.example_questions = get_questions(True)
+    except Exception as e:
+        pass
 
 def render_suggestions():
     st.button("🔄 New Questions", on_click=refresh_questions)
 
-    if not st.session_state.questions:
+    if "example_questions" not in st.session_state or not st.session_state.example_questions:
+        st.info("No questions available right now. Please refresh or try again later.")
         return
 
     st.markdown("#### How can I help you today?")
     cols = st.columns(3)
 
-    for i, q in enumerate(st.session_state.questions):
+    for i, q in enumerate(st.session_state.example_questions):
         with cols[i % 3]:
             if st.button(q.question, key=f"suggest-{q.id}"):
                 st.session_state["prefill"] = q.question

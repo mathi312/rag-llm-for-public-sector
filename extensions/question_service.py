@@ -44,10 +44,17 @@ class QuestionService:
         prompt_template = PromptTemplate(
             input_variables=["text"],
             template=(
-                "You are a helpful assistant."
-                "Given the following document content, come up with five concise, "
-                "varied example questions a user might ask about it.  "
-                "Return ONLY the questions, one per line. Do not include introductory text.\n\n"
+                "You are a helpful assistant that generates high-quality user questions for a document."
+                "Task: Given the document below, create exactly five concise, varied, and meaningful questions a user might ask about its content."
+                "The following points are the Requirements:"
+                "- Questions must be in the same language as the document"
+                "- Questions must be fully answerable using only information in the document."
+                "- Avoid vague, generic, or overly broad questions."
+                "- Ensure diversity: include factual, analytical, and clarification-style questions."
+                "- Cover different sections or themes of the document."
+                "- Do not invent any information not in the document."
+                "- Output exactly five questions, one per line."
+                "- Do NOT include numbering, headers, or explanations."
                 "Document:\n{text}"
             ),
         )
