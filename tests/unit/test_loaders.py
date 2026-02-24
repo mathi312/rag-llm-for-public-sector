@@ -91,37 +91,26 @@ def test_load_directory_documents_success(mock_docx, mock_pdf, tmp_path):
     docx_file.write_text("docx")
 
     mock_pdf.return_value.load.return_value = [
-        Document(
-            metadata={"source": str(pdf_file), "needed_id": []},
-            page_content="pdf-doc",
-        )
+        Document(metadata={}, page_content="pdf-doc")
     ]
     mock_docx.return_value.load.return_value = [
-        Document(
-            metadata={"source": str(docx_file), "needed_id": []},
-            page_content="docx-doc",
-        )
+        Document(metadata={}, page_content="docx-doc")
     ]
 
     documents = load_directory_documents(tmp_path)
 
     assert len(documents) == 2
-    assert documents == [
-        Document(
-            metadata={
-                "source": "/tmp/pytest-of-root/pytest-0/test_load_directory_documents_1/a.pdf",
-                "needed_id": [],
-            },
-            page_content="pdf-doc",
-        ),
-        Document(
-            metadata={
-                "source": "/tmp/pytest-of-root/pytest-0/test_load_directory_documents_1/b.docx",
-                "needed_id": [],
-            },
-            page_content="docx-doc",
-        ),
-    ]
+
+    by_source = {doc.metadata["source"]: doc for doc in documents}
+
+    assert str(pdf_file) in by_source
+    assert str(docx_file) in by_source
+
+    assert by_source[str(pdf_file)].page_content == "pdf-doc"
+    assert by_source[str(pdf_file)].metadata["needed_id"] == []
+
+    assert by_source[str(docx_file)].page_content == "docx-doc"
+    assert by_source[str(docx_file)].metadata["needed_id"] == []
 
 
 @patch("loaders.RecursiveCharacterTextSplitter")
