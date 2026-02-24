@@ -10,8 +10,15 @@ import re
 from typing import List
 from pathlib import Path
 
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, WebBaseLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    Docx2txtLoader,
+    WebBaseLoader,
+)
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    CharacterTextSplitter,
+)
 from langchain_core.documents import Document
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP
@@ -19,10 +26,10 @@ from config import CHUNK_SIZE, CHUNK_OVERLAP
 
 def load_files_to_documents(uploaded_files) -> List[Document]:
     """Convert uploaded Streamlit file objects into LangChain Documents.
-    
+
     Args:
         uploaded_files: List of Streamlit UploadedFile objects.
-        
+
     Returns:
         List[Document]: Parsed documents.
     """
@@ -48,6 +55,7 @@ def load_files_to_documents(uploaded_files) -> List[Document]:
 
     return documents
 
+
 def load_urls_as_documents(urls) -> List[Document]:
     """Load the content of the given urls.
 
@@ -61,12 +69,7 @@ def load_urls_as_documents(urls) -> List[Document]:
 
     for url in urls:
         try:
-            loader = WebBaseLoader(
-                url, 
-                bs_kwargs=dict(
-                    parse_only=None
-                )
-            )
+            loader = WebBaseLoader(url, bs_kwargs=dict(parse_only=None))
             docs = loader.load()
 
             # normalize page content
@@ -80,6 +83,7 @@ def load_urls_as_documents(urls) -> List[Document]:
 
     return documents
 
+
 def load_directory_documents(data_dir: Path) -> List[Document]:
     """Load all PDF/DOCX files from a specific directory path.
 
@@ -90,37 +94,61 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         List[Document]: List of loaded documents from the directory.
     """
     documents: List[Document] = []
-    
+
     if not data_dir.exists():
         return documents
+
+        # Mapping: Dateiname -> benötigte Ausweisarten
+    needed_id_map: dict[str, list[str]] = {}
+    try:
+        from extensions.documentupload import list_documents
+
+        for rec in list_documents():
+            ids = rec.get("needed_id") or []
+            original_name = rec.get("original_name")
+            document_name = rec.get("document_name")
+
+            if original_name:
+                needed_id_map[original_name] = ids
+            if document_name:
+                needed_id_map[document_name] = ids
+    except Exception:
+        needed_id_map = {}
 
     print(f"Scanning {data_dir} for documents...")
     for file_path in data_dir.iterdir():
         if not file_path.is_file():
             continue
-            
+
         try:
             filename = file_path.name.lower()
             if filename.endswith(".pdf"):
                 loader = PyPDFLoader(str(file_path))
-                documents.extend(loader.load())
             elif filename.endswith(".docx"):
                 loader = Docx2txtLoader(str(file_path))
-                documents.extend(loader.load())
+            else:
+                continue
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
             continue
-            
+
+        docs = loader.load()
+
+        for doc in docs:
+            doc.metadata["source"] = str(file_path)
+            doc.metadata["needed_id"] = needed_id_map.get(file_path.name, [])
+        documents.extend(docs)
+
     return documents
 
 
 def split_documents(documents: List[Document]) -> List[Document]:
     """Split documents into smaller chunks for efficient embedding."""
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
     )
     return splitter.split_documents(documents)
+
 
 def normalize_web_text(text: str) -> str:
     """Normalize the text of a webpage."""

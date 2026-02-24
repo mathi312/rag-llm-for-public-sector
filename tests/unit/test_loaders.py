@@ -4,6 +4,9 @@ from pathlib import Path
 
 from loaders import *
 
+from langchain_core.documents import Document
+
+
 class FakeUploadedFile:
     def __init__(self, name: str, content: bytes):
         self.name = name
@@ -11,6 +14,7 @@ class FakeUploadedFile:
 
     def getvalue(self):
         return self._content
+
 
 @patch("loaders.os.remove")
 @patch("loaders.PyPDFLoader")
@@ -36,6 +40,7 @@ def test_load_files_to_documents_pdf_and_docx(
     assert documents == [pdf_doc, docx_doc]
     assert mock_remove.call_count == 2
 
+
 def test_load_files_to_documents_unsupported_file():
     files = [
         FakeUploadedFile("notes.txt", b"text content"),
@@ -44,6 +49,7 @@ def test_load_files_to_documents_unsupported_file():
     documents = load_files_to_documents(files)
 
     assert documents == []
+
 
 @patch("loaders.WebBaseLoader")
 def test_load_urls_as_documents_success(mock_loader):
@@ -57,6 +63,7 @@ def test_load_urls_as_documents_success(mock_loader):
     assert len(documents) == 1
     assert documents[0].page_content == "Hello\nWorld."
 
+
 @patch("loaders.WebBaseLoader")
 def test_load_urls_as_documents_error(mock_loader):
     mock_loader.side_effect = Exception("Load failed")
@@ -65,12 +72,14 @@ def test_load_urls_as_documents_error(mock_loader):
 
     assert documents == []
 
+
 def test_load_directory_documents_missing_dir(tmp_path):
     non_existing = tmp_path / "missing"
 
     documents = load_directory_documents(non_existing)
 
     assert documents == []
+
 
 @patch("loaders.PyPDFLoader")
 @patch("loaders.Docx2txtLoader")
@@ -81,12 +90,28 @@ def test_load_directory_documents_success(mock_docx, mock_pdf, tmp_path):
     pdf_file.write_text("pdf")
     docx_file.write_text("docx")
 
-    mock_pdf.return_value.load.return_value = ["pdf-doc"]
-    mock_docx.return_value.load.return_value = ["docx-doc"]
+    mock_pdf.return_value.load.return_value = [
+        Document(metadata={}, page_content="pdf-doc")
+    ]
+    mock_docx.return_value.load.return_value = [
+        Document(metadata={}, page_content="docx-doc")
+    ]
 
     documents = load_directory_documents(tmp_path)
 
-    assert set(documents) == {'docx-doc', 'pdf-doc'}
+    assert len(documents) == 2
+
+    by_source = {doc.metadata["source"]: doc for doc in documents}
+
+    assert str(pdf_file) in by_source
+    assert str(docx_file) in by_source
+
+    assert by_source[str(pdf_file)].page_content == "pdf-doc"
+    assert by_source[str(pdf_file)].metadata["needed_id"] == []
+
+    assert by_source[str(docx_file)].page_content == "docx-doc"
+    assert by_source[str(docx_file)].metadata["needed_id"] == []
+
 
 @patch("loaders.RecursiveCharacterTextSplitter")
 def test_split_documents(mock_splitter):
@@ -100,6 +125,7 @@ def test_split_documents(mock_splitter):
 
     splitter_instance.split_documents.assert_called_once_with(docs)
     assert result == ["chunk1", "chunk2"]
+
 
 def test_normalize_web_text_removes_excess_whitespace():
     text = "Hello\n\n\nWorld   .  "

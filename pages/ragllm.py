@@ -65,6 +65,12 @@ build_mode = "Use existing index"
 process_btn = False
 
 # --- SESSION STATE ---
+if "provider" not in st.session_state:
+    st.session_state.provider = provider
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = selected_model
+if "embedding_model_name" not in st.session_state:
+    st.session_state.embedding_model_name = embedding_model_name
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "messages" not in st.session_state:
@@ -148,7 +154,9 @@ with st.sidebar:
             st.header("1. AI Provider Configuration")
 
             provider = st.radio(
-                "Select Provider", ["Local (Ollama)", "OpenAI"], index=0
+                "Select Provider",
+                ["Local (Ollama)", "OpenAI"],
+                index=0 if st.session_state.provider == "Local (Ollama)" else 1
             )
 
             api_key = None
@@ -156,20 +164,28 @@ with st.sidebar:
 
             if provider == "OpenAI":
                 api_key = st.text_input("OpenAI API Key", type="password")
+                openai_models = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
                 selected_model = st.selectbox(
                     "Select OpenAI Model",
-                    ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
-                    index=1,
+                    openai_models,
+                    index=openai_models.index(st.session_state.selected_model)
+                    if st.session_state.selected_model in openai_models else 1,
                 )
                 # We hardcode the embedding model for OpenAI to be consistent
                 embedding_model_name = "text-embedding-3-small"
             else:
+                local_models = ["llama3.2", "llama3", "mistral"]
                 selected_model = st.selectbox(
-                    "Select Local Model", ["llama3.2", "llama3", "mistral"], index=0
+                    "Select Local Model",
+                    local_models,
+                    index=local_models.index(st.session_state.selected_model)
+                    if st.session_state.selected_model in local_models else 0,
                 )
-                embedding_model_name = (
-                    selected_model  # Ollama uses the same model tag usually
-                )
+                embedding_model_name = selected_model
+
+            st.session_state.provider = provider
+            st.session_state.selected_model = selected_model
+            st.session_state.embedding_model_name = embedding_model_name
 
             st.divider()
 
