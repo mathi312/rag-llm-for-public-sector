@@ -16,6 +16,7 @@ class Report:
         """Initialize a report for a given LLM."""
         self.llm: str = llm
         self.chat_history: Dict[str, str] = {}
+        self.id_type: str = None
 
     def timestamp(self) -> str:
         """Return the current timestamp formatted for the report."""

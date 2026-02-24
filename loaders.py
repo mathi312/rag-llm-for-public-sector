@@ -133,6 +133,7 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
             continue
 
         docs = loader.load()
+
         for doc in docs:
             doc.metadata["source"] = str(file_path)
             doc.metadata["needed_id"] = needed_id_map.get(file_path.name, [])
