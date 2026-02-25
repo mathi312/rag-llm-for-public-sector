@@ -21,30 +21,38 @@ from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
 from extensions.documentupload import upload_document
+from extensions.question_controller import get_questions, update_times_asked_of_question
 
-#Questions suggestions für Bubbles
-SUGGESTED_QUESTIONS = [
-    "Welche Dateien sind bereits indexiert?",
-    "Erkläre mir die Beziehung zwischen Blutdruck und Blutfluss",
-    "Wie wechsle ich von Ollama zu OpenAI?",
-    "Baue den Index neu auf.",
-    "Welche Modelle sind verfügbar?"
-]
 
-if "hide_suggestions" not in st.session_state:
-    st.session_state.hide_suggestions = False
+if "example_questions" not in st.session_state:
+    try:
+        st.session_state.example_questions = get_questions()
+    except Exception as e:
+        pass
+
+def refresh_questions():
+    try:
+        st.session_state.example_questions = get_questions(True)
+    except Exception as e:
+        pass
 
 def render_suggestions():
-    if st.session_state.hide_suggestions:
+    st.button("🔄 New Questions", on_click=refresh_questions)
+
+    if "example_questions" not in st.session_state or not st.session_state.example_questions:
+        st.info("No questions available right now. Please refresh or try again later.")
         return
+
     st.markdown("#### How can I help you today?")
     cols = st.columns(3)
-    for i, q in enumerate(SUGGESTED_QUESTIONS):
+
+    for i, q in enumerate(st.session_state.example_questions):
         with cols[i % 3]:
-            if st.button(q, key=f"suggest-{i}"):
-                st.session_state["prefill"] = q
+            if st.button(q.question, key=f"suggest-{q.id}"):
+                st.session_state["prefill"] = q.question
                 st.session_state["auto_send"] = True
-                st.session_state.hide_suggestions = True  # sofort ausblenden
+                st.session_state.hide_suggestions = True
+                update_times_asked_of_question(q.id)
 
 
 # Define the static data directory (mounted via Docker)
@@ -383,6 +391,13 @@ if process_btn:
 # --- CHAT UI ---
 if st.session_state.vector_store:
     st.divider()
+
+    render_suggestions()
+    auto_send = st.session_state.pop("auto_send", False)
+    prefill = st.session_state.pop("prefill", "")
+    user_input = st.chat_input("Frage stellen …")  # bleibt immer sichtbar
+    user_msg = prefill if auto_send else user_input
+
     for i, m in enumerate(st.session_state.messages):
         with st.chat_message(m["role"]):
             st.markdown(m["content"])
@@ -403,12 +418,6 @@ if st.session_state.vector_store:
                             args=(doc.page_content, title),
                             use_container_width=True,
                         )
-
-    render_suggestions()
-    auto_send = st.session_state.pop("auto_send", False)
-    prefill = st.session_state.pop("prefill", "")
-    user_input = st.chat_input("Frage stellen …")  # bleibt immer sichtbar
-    user_msg = prefill if auto_send else user_input
 
     if auto_send or user_msg:
         st.session_state.hide_suggestions = True
