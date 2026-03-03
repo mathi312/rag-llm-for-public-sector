@@ -4,7 +4,7 @@ import re
 
 from pathlib import Path
 from playwright.sync_api import expect
-from test_login import navigate_to_login_page, login
+from test_login import navigate_to_login_page, login, seed_test_user, pb
 
 FILEPATH = Path(__file__).parent / "test_data" / "lebensunterhalt.pdf"
 
@@ -16,13 +16,14 @@ def logout(page):
 
     # this runs after each test in this module
     try:
+        page.get_by_text("keyboard_arrow_right").click()
+
         page.get_by_test_id("stBaseButton-primary").click()
     except:
         # already logged out, so do nothing
         pass
 
-def test_document_upload_and_build_index(page, navigate_to_login_page):
-    """Test document upload and building the index"""
+def test_document_upload_and_build_index(page, navigate_to_login_page, seed_test_user):
     login(page, "testuser@testuser.de", "12345678")
 
     # wait for page to load, more determinstic solution than using networkidle
@@ -35,6 +36,9 @@ def test_document_upload_and_build_index(page, navigate_to_login_page):
     data_source = page.get_by_role("heading", name="Data Sources")
     expect(data_source).to_be_visible()
 
+    expect(page.get_by_test_id("stTabs").locator("summary")).to_contain_text("Add Temporary Sources")
+    page.get_by_test_id("stTabs").get_by_test_id("stIconMaterial").click()
+
     # locate file upload input and choose the second one, because the first one is for the id upload
     file_input = page.locator('input[data-testid="stFileUploaderDropzoneInput"]').nth(1)
     file_input.wait_for(state="attached")
@@ -45,6 +49,13 @@ def test_document_upload_and_build_index(page, navigate_to_login_page):
     file_input.set_input_files(FILEPATH)
 
     expect(page.get_by_text("lebensunterhalt", exact=False)).to_be_visible()
+    
+    # dont include the files in the data dir
+    locator = page.get_by_text("✅ Found")
+
+    if locator.is_visible():
+        page.locator("div").filter(has_text=re.compile(r"^Include static files$")).nth(2).click()
+    
     # select rebuild index
     index_mode = page.locator('div[aria-label="Index mode"] label[data-baseweb="radio"]:has(input[value="1"])')
     index_mode.click()
@@ -54,7 +65,6 @@ def test_document_upload_and_build_index(page, navigate_to_login_page):
     page.get_by_text("Index built successfully!").wait_for(state="visible", timeout=180000)
 
 def test_user_can_ask_question_and_send_chat_report_by_email(page):
-    """Test ask question and receive a answer with a source and print the chat as report"""
     page.goto(BASE_URL)
 
     # wait for page to load, more determinstic solution than using networkidle
@@ -71,7 +81,7 @@ def test_user_can_ask_question_and_send_chat_report_by_email(page):
     page.get_by_text("Der Lebensunterhalt ist").wait_for(state="visible", timeout=180000)
 
     # check that the correct source is displayed
-    page.get_by_test_id("stColumn").get_by_test_id("stBaseButton-secondary").click()
+    page.locator("button", has_text=".pdf").first.click()
     expect(page.get_by_test_id("stDialog").get_by_test_id("stLayoutWrapper")).to_contain_text(
         "Paragraph 17 gilt der Lebensunterhalt als gesichert, wenn Mittel entsprechend dem Bedarf zuzüglich eines Zuschlags von " +
         "zehn Prozent zur Verfügung stehen. Die jährlichen Mindestbeträge werden vom Bundesministerium des Innern im Bundesanzeiger bekannt gemacht.")
@@ -88,7 +98,7 @@ def test_user_can_ask_question_and_send_chat_report_by_email(page):
     page.get_by_role("textbox", name="Email").fill("test@mail.de")
     page.get_by_test_id("stDialog").get_by_test_id("stBaseButton-secondary").click()
 
-    expect(page.get_by_test_id("stAlertContentSuccess")).to_contain_text("Email sent successfully.")
+    expect(page.get_by_text("Email sent successfully.")).to_be_visible()
 
 def test_print_report_shows_error_when_no_chat_exists(page):
     """Test error message when printing a report without chat history."""

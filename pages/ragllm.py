@@ -21,6 +21,7 @@ from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
 from extensions.documentupload import upload_document
+from pages.components.user_menu import user_menu
 from extensions.question_controller import get_questions, update_times_asked_of_question
 
 
@@ -144,10 +145,8 @@ def select_id_type_dialog(id_image, exception: str):
 
 # --- SIDEBAR UI ---
 with st.sidebar:
-    st.header("Current User")
-    show_logged_in_status()
-
-    st.divider()
+    if st.session_state.user:
+        user_menu(st.session_state.user)
 
     tab_labels = ["General"]
     is_admin = is_authenticated() and user_is_admin()
@@ -198,6 +197,8 @@ with st.sidebar:
             st.divider()
 
             st.header("2. Data Sources")
+            
+            st.write("The static files can be managed on the Documentmanagement page.")
 
             # Static Files Check
             static_files = []
@@ -215,25 +216,29 @@ with st.sidebar:
                 st.info("No static files found in /data")
                 include_static = False
 
-            # Upload Files
-            uploaded_files = st.file_uploader(
-                "Upload additional files",
-                type=["pdf", "docx"],
-                accept_multiple_files=True,
-            )
+            with st.expander("Add Temporary Sources", expanded=False):
 
-            # Enter a URL from which to load the html content
-            st.text_input(
-                "Enter URL from which to load content:",
-                key="url_input",
-                on_change=add_url,
-            )
+                st.write("The sources added here are NOT saved to the database.")
 
-            # Display all entered URLs
-            if st.session_state.urls:
-                st.markdown("Added URLs")
-                for u in st.session_state.urls:
-                    st.write(u)
+                # Upload Files
+                uploaded_files = st.file_uploader(
+                    "Upload temporary files",
+                    type=["pdf", "docx"],
+                    accept_multiple_files=True,
+                )
+
+                # Add URL
+                st.text_input(
+                    "Add URL to include",
+                    key="url_input",
+                    on_change=add_url,
+                )
+
+                # Display URLs
+                if st.session_state.get("urls"):
+                    st.markdown("**Added URLs:**")
+                    for u in st.session_state.urls:
+                        st.write(f"- {u}")
 
             st.divider()
 

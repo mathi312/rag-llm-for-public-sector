@@ -7,17 +7,8 @@ from extensions.logger import Logger
 
 logger = Logger()
 
-def get_pocketbase_client():
-    use_fake = os.getenv("MOCK_POCKETBASE", "false").lower() == "true"
-
-    if use_fake:
-        from tests.integration.pocketbase_mock import PocketBaseMock
-        return PocketBaseMock()
-
-    pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
-    return PocketBase(pb_url)
-
-client = get_pocketbase_client()
+pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
+client = PocketBase(pb_url)
 
 def restore_session() -> None:
     """Restore the user session from the auth store."""
