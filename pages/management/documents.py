@@ -6,7 +6,7 @@ from extensions.documentupload import (
     confirm_delete_document,
     view_pdf_dialog
 )
-from extensions.question_controller import generate_questions
+from extensions.example_questions.question_controller import generate_questions
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
@@ -61,17 +61,15 @@ if docs:
 
         # generate example questions
         if cols[6].button("Generate questions", key=f"generate-{doc['id']}", use_container_width=True):
-            try:
-                questions = generate_questions(
-                    document_name=doc.get("original_name"),
-                    provider=st.session_state.provider,
-                    model_name=st.session_state.selected_model
-                )
+            questions = generate_questions(
+                document_name=doc.get("original_name"),
+                provider=st.session_state.provider,
+                model_name=st.session_state.selected_model,
+            )
+            if questions:
                 show_questions_dialog(questions)
-            except FileNotFoundError as e:
-                st.error(f"Could not find document: {doc}")
-            except Exception as e:
-                st.exception(e)
+            else:
+                st.error(f"Could not generate questions for **{doc.get('original_name')}**. Please try again later.")
 
         # View
         if cols[7].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):

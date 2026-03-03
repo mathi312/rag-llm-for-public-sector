@@ -2,7 +2,7 @@ from typing import List
 
 import streamlit as st
 
-from extensions.question_controller import save_questions
+from extensions.example_questions.question_controller import save_questions
 
 
 @st.dialog("Review Generated Questions")
@@ -32,15 +32,10 @@ def show_questions_dialog(generated_questions: List[str]):
             st.error("The list is empty. Please add at least one question.")
             return
 
-        try:
-            save_questions(to_save)
+        if save_questions(to_save):
             st.success("Successfully saved questions!")
-            # clear seesion state
             del st.session_state.questions
             if "questions_editor" in st.session_state:
                 del st.session_state["questions_editor"]
-
-        except ValueError as e:
-            st.warning(e)
-        except Exception as exc:
-            st.exception(exc)
+        else:
+            st.error("Could not save questions. Please try again later.")
