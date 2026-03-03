@@ -13,6 +13,8 @@ from extensions.example_questions.exceptions import (
 )
 from models import get_llm
 
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
 
 class QuestionService:
     """
@@ -37,8 +39,7 @@ class QuestionService:
         if not document_name or not provider or not model_name:
             raise ValueError("document_name, provider and model_name must all be provided")
 
-        data_dir = Path(__file__).resolve().parent.parent / "data"
-        file_path = data_dir / document_name
+        file_path = DATA_DIR / document_name
 
         if not file_path.exists():
             raise FileNotFoundError(f"document not found: {file_path}")
