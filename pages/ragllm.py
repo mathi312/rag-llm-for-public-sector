@@ -22,25 +22,26 @@ from extensions.pocketbase import *
 from extensions.user import User
 from extensions.documentupload import upload_document
 from pages.components.user_menu import user_menu
-from extensions.question_controller import get_questions, update_times_asked_of_question
+from extensions.example_questions.question_controller import get_questions, update_times_asked_of_question
 
 
 if "example_questions" not in st.session_state:
-    try:
-        st.session_state.example_questions = get_questions()
-    except Exception as e:
-        pass
+    st.session_state.example_questions = get_questions()
 
 def refresh_questions():
-    try:
-        st.session_state.example_questions = get_questions(True)
-    except Exception as e:
-        pass
+    questions = get_questions(random=True)
+    if questions:
+        st.session_state.example_questions = questions
+    else:
+        st.session_state.questions_error = True
 
 def render_suggestions():
     st.button("🔄 New Questions", on_click=refresh_questions)
 
-    if "example_questions" not in st.session_state or not st.session_state.example_questions:
+    if st.session_state.pop("questions_error", False):
+        st.error("Could not refresh questions. Please try again later.")
+
+    if not st.session_state.get("example_questions"):
         st.info("No questions available right now. Please refresh or try again later.")
         return
 
@@ -52,7 +53,6 @@ def render_suggestions():
             if st.button(q.question, key=f"suggest-{q.id}"):
                 st.session_state["prefill"] = q.question
                 st.session_state["auto_send"] = True
-                st.session_state.hide_suggestions = True
                 update_times_asked_of_question(q.id)
 
 
@@ -425,7 +425,6 @@ if st.session_state.vector_store:
                         )
 
     if auto_send or user_msg:
-        st.session_state.hide_suggestions = True
 
         prompt = user_msg
         st.chat_message("user").markdown(prompt)

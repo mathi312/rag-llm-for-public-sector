@@ -3,17 +3,18 @@ from pathlib import Path
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-from extensions.question_repository import QuestionRepository
+from extensions.example_questions.question_repository import QuestionRepository
 from extensions.documentupload import extract_text_from_file
-from extensions.question import Question
+from extensions.example_questions.question import Question
+from extensions.example_questions.exceptions import (
+    QuestionFetchError,
+    QuestionCreateError,
+    QuestionUpdateError,
+)
 from models import get_llm
 
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
-class PocketBaseSaveError(Exception):
-    """Custom exception for failures when pocketbase failes to save a question."""
-
-class PocketBaseNoQuestionsFound(Exception):
-    """Custom exception for failures when pocketbase failes to retrive questions."""
 
 class QuestionService:
     """
@@ -29,12 +30,16 @@ class QuestionService:
         """
         Read the document from the data directory, hand its text to a LangChain LLM and
         return a list of example questions a user could ask about the document.
+
+        Raises:
+            ValueError: If the document_name, provider or model_name is null.
+            FileNotFoundError: If no document can be found for the provided document_name
+            RuntimeError: If the invocation of the llm failes.
         """
         if not document_name or not provider or not model_name:
             raise ValueError("document_name, provider and model_name must all be provided")
 
-        data_dir = Path(__file__).resolve().parent.parent / "data"
-        file_path = data_dir / document_name
+        file_path = DATA_DIR / document_name
 
         if not file_path.exists():
             raise FileNotFoundError(f"document not found: {file_path}")
@@ -74,26 +79,28 @@ class QuestionService:
     def save_questions(self, questions: list[str]) -> bool:
         """
         Saves the provided questions to pocketbase.
+
+        Raises:
+            ValueError: If the questions list is empty.
+            QuestionFetchError: If checking for duplicates fails.
+            QuestionCreateError: If saving a question fails.
         """
         if not questions:
             raise ValueError("The questions list cannot be empty or None.")
 
-        try:
-            for q in questions:
-                clean_q = q.strip()
-                # Skip empty strings or whitespace
-                if not q or not clean_q:
-                    continue
+        for q in questions:
+            clean_q = q.strip()
+            # Skip empty strings or whitespace
+            if not q or not clean_q:
+                continue
 
-                # Skip duplicates
-                if self.repo.exists_by_text(clean_q):
-                    continue
+            # Skip duplicates
+            if self.repo.exists_by_text(clean_q):
+                continue
 
-                self.repo.create_question(clean_q)
+            self.repo.create_question(clean_q)
 
-            return True
-        except Exception as e:
-            raise PocketBaseSaveError(f"Failed to save questions due to: {e}") from e
+        return True
 
 
     def get_questions(self, random_only: bool = False) -> list[Question]:
@@ -105,52 +112,55 @@ class QuestionService:
 
         Otherwise:
             → return 4 most asked + 2 random (excluding the top ones).
+
+        Raises:
+            ValueError: If no questions exist in PocketBase.
+            QuestionFetchError: If the PocketBase request fails.
         """
-        try:
-            total = 6
+        total = 6
 
-            # Fully random mode
-            if random_only:
-                questions = self.repo.get_random_questions(
-                    exclude=[],
-                    num_of_questions=total,
-                )
+        # Fully random mode
+        if random_only:
+            questions = self.repo.get_random_questions(
+                exclude=[],
+                num_of_questions=total,
+            )
 
-                if not questions:
-                    raise ValueError(
-                        "No questions found in PocketBase. Please create some questions."
-                    )
-
-                return questions
-
-            # Mixed mode (default)
-            most_asked = self.repo.get_most_asked_question_from_pb()
-
-            if not most_asked:
+            if not questions:
                 raise ValueError(
                     "No questions found in PocketBase. Please create some questions."
                 )
 
-            remaining = total - len(most_asked)
+            return questions
 
-            random_questions = self.repo.get_random_questions(
-                exclude=most_asked,
-                num_of_questions=remaining,
+        # Mixed mode (default)
+        most_asked = self.repo.get_most_asked_question_from_pb()
+
+        if not most_asked:
+            raise ValueError(
+                "No questions found in PocketBase. Please create some questions."
             )
 
-            return most_asked + random_questions
-        except ValueError as e:
-            raise PocketBaseNoQuestionsFound(f"Failed to retrieve questions: {e}")
+        remaining = total - len(most_asked)
+
+        random_questions = self.repo.get_random_questions(
+            exclude=most_asked,
+            num_of_questions=remaining,
+        )
+
+        return most_asked + random_questions
+
 
     def increment_times_asked(self, question_id: str) -> bool:
         """
         Saves the provided questions to pocketbase.
+
+        Raises:
+            ValueError: If question_id is empty.
+            QuestionUpdateError: If the PocketBase update fails.
         """
         if not question_id:
             raise ValueError("The id cannot be empty")
 
-        try:
-            self.repo.increment_times_asked(question_id)
-            return True
-        except Exception as e:
-            raise PocketBaseSaveError(f"Failed to update the question: {question_id} due to: {e}") from e
+        self.repo.increment_times_asked(question_id)
+        return True
