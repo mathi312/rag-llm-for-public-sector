@@ -3,7 +3,7 @@ import re
 
 from typing import Any
 from unittest.mock import patch, MagicMock
-from extensions.report import Report
+from extensions.report_generator.report import Report
 from extensions.user import User
 
 
@@ -39,7 +39,29 @@ def test_timestamp_format():
     assert isinstance(timestamp, str)
     assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", timestamp)
 
-@patch("extensions.report.FPDF")
+def test_none_does_not_set_id_type():
+    report = Report(llm="llama3.2")
+    report.add_id_type(None)
+    assert report.id_type is None
+
+def test_sets_id_type_with_valid_string():
+    report = Report(llm="llama3.2")
+    report.add_id_type("passport")
+    assert report.id_type == "passport"
+
+def test_none_does_not_overwrite_existing_id_type():
+    report = Report(llm="llama3.2")
+    report.add_id_type("passport")
+    report.add_id_type(None)
+    assert report.id_type == "passport"
+
+def test_overwrites_existing_id_type():
+    report = Report(llm="llama3.2")
+    report.add_id_type("passport")
+    report.add_id_type("drivers_license")
+    assert report.id_type == "drivers_license"
+
+@patch("extensions.report_generator.report.FPDF")
 def test_to_pdf_returns_bytes_without_user(mock_fpdf):
     mock_pdf = MagicMock()
     mock_pdf.output.return_value = b"%PDF-1.4"
@@ -55,7 +77,7 @@ def test_to_pdf_returns_bytes_without_user(mock_fpdf):
     assert len(pdf_bytes) > 0
     mock_pdf.add_page.assert_called_once()
 
-@patch("extensions.report.FPDF")
+@patch("extensions.report_generator.report.FPDF")
 def test_to_pdf_returns_bytes_with_user(mock_fpdf):
     mock_pdf = MagicMock()
     mock_pdf.output.return_value = b"%PDF-1.4"
@@ -73,6 +95,23 @@ def test_to_pdf_returns_bytes_with_user(mock_fpdf):
     )
 
     pdf_bytes = report.to_pdf(user=user)
+
+    assert isinstance(pdf_bytes, (bytes, bytearray))
+    assert len(pdf_bytes) > 0
+    mock_pdf.add_page.assert_called_once()
+
+@patch("extensions.report_generator.report.FPDF")
+def test_to_pdf_returns_bytes_with_id_type(mock_fpdf):
+    mock_pdf = MagicMock()
+    mock_pdf.output.return_value = b"%PDF-1.4"
+
+    mock_fpdf.return_value = mock_pdf
+
+    report = Report(llm="llama3.2")
+    report.add_entry("What is AI?", "Artificial Intelligence")
+    report.add_id_type("ID Card")
+
+    pdf_bytes = report.to_pdf()
 
     assert isinstance(pdf_bytes, (bytes, bytearray))
     assert len(pdf_bytes) > 0

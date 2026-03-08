@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
-from extensions.report import Report
+from extensions.report_generator.report import Report
 
 SYSTEM_PROMPT = (
     "You are an assistant for question-answering tasks. "

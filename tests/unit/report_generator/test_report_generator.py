@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from email.message import EmailMessage
 
-from extensions.report_generator import *
-from extensions.report import Report
+from extensions.report_generator.report_generator import *
+from extensions.report_generator.report import Report
 
 def test_print_report_raises_error_when_report_is_none():
     with pytest.raises(EmptyReportError):
@@ -31,7 +31,7 @@ def test_send_report_raises_error_when_email_is_empty():
     with pytest.raises(EmptyEmailAddressError):
         send_report_via_email(report=report, to_email="")
 
-@patch("extensions.report_generator.smtplib.SMTP")
+@patch("extensions.report_generator.report_generator.smtplib.SMTP")
 def test_send_report_sends_email(smtp_mock):
     report = Report(llm="llama3.2")
     report.add_entry("Q", "A")

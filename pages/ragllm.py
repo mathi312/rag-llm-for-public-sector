@@ -4,7 +4,7 @@ This module provides the web interface for uploading documents, building
 or loading vector indexes, and interacting with the document corpus via
 natural language queries.
 """
-
+import re
 import streamlit as st
 from pathlib import Path
 
@@ -15,8 +15,9 @@ from chat import create_rag_chain, answer_question
 
 import time
 
-from extensions.report_generator import *
-from extensions.report import Report
+from extensions.report_generator.report_generator import print_report, send_report_via_email
+from extensions.report_generator.report import Report
+from extensions.report_generator.excpetions import *
 from extensions.idprovider import *
 from extensions.pocketbase import *
 from extensions.user import User
@@ -292,13 +293,17 @@ def email_dialog(exception: str):
     email = st.text_input("Email")
 
     if st.button("Send email"):
-        try:
-            send_report_via_email(st.session_state.report, email, st.session_state.user)
-            st.success("Email sent successfully.")
-        except (EmptyReportError, EmptyEmailAddressError) as e:
-            st.warning(str(e))
-        except Exception as e:
-            st.exception(e)
+        email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
+        if not re.match(email_pattern, email):
+            st.warning("Invalid email address")
+        else:
+            try:
+                send_report_via_email(st.session_state.report, email, st.session_state.user)
+                st.success("Email sent successfully.")
+            except (EmptyReportError, EmptyEmailAddressError) as e:
+                st.warning(str(e))
+            except Exception as e:
+                st.exception(e)
 
 if print_report_btn:
     try:
