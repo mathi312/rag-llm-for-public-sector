@@ -270,6 +270,9 @@ with st.sidebar:
                     time.sleep(2)
                     msg.empty()
 
+                    if st.session_state.report:
+                        st.session_state.report.add_id_type(st.session_state.get("id_document").get("type"))
+
                     st.success("ID Document successfully processed!")
                 except ValueError as exc:
                     select_id_type_dialog(id_image, exc)
