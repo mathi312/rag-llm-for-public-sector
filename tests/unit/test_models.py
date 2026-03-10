@@ -29,6 +29,22 @@ def test_get_embeddings_ollama_default():
         )
         assert result is mock_instance
 
+def test_get_embeddings_with_api_key_returns_open_ai_embeddings():
+    with patch("models.OpenAIEmbeddings") as mock_open_ai:
+        mock_instance = MagicMock()
+        mock_open_ai.return_value = mock_instance
+
+        result = get_embeddings(
+            provider="OpenAI",
+            model_name="gpt-4o",
+            api_key="test1234key",
+        )
+
+        mock_open_ai.assert_called_once_with(
+            model='gpt-4o',
+            api_key='test1234key'
+        )
+        assert result is mock_instance
 
 def test_get_embeddings_unknown_provider_defaults_to_ollama():
     """Any unknown provider should default to Ollama."""
@@ -86,4 +102,22 @@ def test_get_llm_unknown_provider_defaults_to_ollama():
         )
 
         mock_ollama.assert_called_once()
+        assert result is mock_instance
+
+def test_get_llm_with_api_key_returns_open_ai_embeddings():
+    with patch("models.ChatOpenAI") as mock_open_ai:
+        mock_instance = MagicMock()
+        mock_open_ai.return_value = mock_instance
+
+        result = get_llm(
+            provider="OpenAI",
+            model_name="gpt-4o",
+            api_key="test1234key",
+        )
+
+        mock_open_ai.assert_called_once_with(
+            model='gpt-4o',
+            temperature=0.0,
+            api_key='test1234key'
+        )
         assert result is mock_instance
