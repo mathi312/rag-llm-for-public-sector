@@ -1,16 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from chat import needs_id_prompt, create_rag_chain, answer_question
+from chat import needs_id_prompt, create_rag_chain, answer_question, sources_require_id
 
-@pytest.mark.parametrize("question, id_uploaded, expected", [
-    ("Was ist ein Führungszeugnis?", False, True),
-    ("Ich brauche eine Bescheinigung.", False, True),
-    ("Text ohne Keywords.", False, False),
-    ("Was ist ein Führungszeugnis?", True, False),
-])
-def test_needs_id_prompt(question, id_uploaded, expected):
-    """Test if the id prompt should be displayed"""
-    assert needs_id_prompt(question, id_uploaded) == expected
 
 @patch("chat.create_stuff_documents_chain")
 def test_create_rag_chain(mock_create_stuff_documents_chain):
@@ -89,3 +80,98 @@ class TestAnswerQuestion:
         answer_question(mock_rag_chain, question, report=mock_report)
         
         mock_report.add_entry.assert_called_once_with(question, "Dies ist die Antwort.")
+
+
+class TestSourcesRequireId:
+    """Tests for the method sources_require_id"""
+
+    def make_doc(self, needed_id=None):
+        doc = MagicMock()
+        doc.metadata = {"needed_id": needed_id} if needed_id is not None else {}
+        return doc
+
+    def test_empty_sources_returns_false_and_empty_list(self):
+        assert sources_require_id([]) == (False, [])
+
+    def test_none_sources_returns_false_and_empty_list(self):
+        assert sources_require_id(None) == (False, [])
+
+    def test_single_doc_with_one_id_type(self):
+        doc = self.make_doc(needed_id=["passport"])
+        result = sources_require_id([doc])
+        assert result == (True, ["passport"])
+
+    def test_single_doc_with_multiple_id_types(self):
+        doc = self.make_doc(needed_id=["passport", "driver_license"])
+        result = sources_require_id([doc])
+        assert result == (True, ["driver_license", "passport"])
+
+    def test_multiple_docs_with_overlapping_ids_deduplicates(self):
+        doc1 = self.make_doc(needed_id=["passport"])
+        doc2 = self.make_doc(needed_id=["passport", "id_card"])
+        result = sources_require_id([doc1, doc2])
+        assert result == (True, ["id_card", "passport"])
+
+    def test_doc_with_no_needed_id_key(self):
+        doc = self.make_doc()  # metadata exists but no 'needed_id' key
+        assert sources_require_id([doc]) == (False, [])
+
+    def test_doc_with_none_needed_id(self):
+        doc = self.make_doc(needed_id=None)
+        assert sources_require_id([doc]) == (False, [])
+
+    def test_doc_with_empty_needed_id_list(self):
+        doc = self.make_doc(needed_id=[])
+        assert sources_require_id([doc]) == (False, [])
+
+    def test_doc_without_metadata_attribute(self):
+        doc = object()
+        assert sources_require_id([doc]) == (False, [])
+
+    def test_bool_flag_is_true_when_ids_present(self):
+        doc = self.make_doc(needed_id=["passport"])
+        required, _ = sources_require_id([doc])
+        assert required is True
+
+    def test_bool_flag_is_false_when_no_ids(self):
+        doc = self.make_doc(needed_id=[])
+        required, _ = sources_require_id([doc])
+        assert required is False
+
+
+class TestNeedsIdPrompt:
+
+    def make_doc(self, needed_id=None):
+        doc = MagicMock()
+        doc.metadata = {"needed_id": needed_id} if needed_id is not None else {}
+        return doc
+
+    @pytest.mark.parametrize("question, id_uploaded, expected", [
+        ("Was ist ein Führungszeugnis?", False, True),
+        ("Ich brauche eine Bescheinigung.", False, True),
+        ("Text ohne Keywords.", False, False),
+        ("Was ist ein Führungszeugnis?", True, False),
+    ])
+    def test_needs_id_prompt_keywords(self, question, id_uploaded, expected):
+        """Test keyword-based detection without sources."""
+        assert needs_id_prompt(question, id_uploaded) == expected
+
+    def test_needs_id_prompt_id_already_uploaded_return_false(self):
+        doc = self.make_doc(needed_id=["passport"])
+        assert needs_id_prompt("Führungszeugnis", id_uploaded=True, sources=[doc]) is False
+
+    def test_needs_id_prompt_sources_require_id_returns_true(self):
+        doc = self.make_doc(needed_id=["passport"])
+        assert needs_id_prompt("Text ohne Keywords.", id_uploaded=False, sources=[doc]) is True
+
+    def test_needs_id_prompt_sources_require_id_overrides_no_keyword_match(self):
+        doc = self.make_doc(needed_id=["id_card"])
+        assert needs_id_prompt("Wie ist das Wetter?", id_uploaded=False, sources=[doc]) is True
+
+    def test_needs_id_prompt_sources_no_id_required_falls_back_to_keyword_true(self):
+        doc = self.make_doc(needed_id=[])
+        assert needs_id_prompt("Führungszeugnis", id_uploaded=False, sources=[doc]) is True
+
+    def test_needs_id_prompt_sources_no_id_required_falls_back_to_keyword_false(self):
+        doc = self.make_doc(needed_id=[])
+        assert needs_id_prompt("Text ohne Keywords.", id_uploaded=False, sources=[doc]) is False
