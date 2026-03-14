@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
-from extensions.report import Report
+from extensions.report_generator.report import Report
 
 SYSTEM_PROMPT = (
     "You are an assistant for question-answering tasks. "
@@ -107,6 +107,8 @@ def answer_question(
 
     if report is not None:
         report.add_entry(question, answer)
-        report.add_id_type(id_document.get('type') if id_uploaded else "None")
+
+        if report.id_type is None:
+            report.add_id_type(id_document.get('type') if id_uploaded else None)
 
     return answer, sources

@@ -2,22 +2,8 @@ import smtplib
 
 from email.message import EmailMessage
 from extensions.user import User
-from extensions.report import Report
-
-
-class PrinterBrokenError(Exception):
-    """Raised when the printer is broken"""
-    pass
-
-
-class EmptyReportError(Exception):
-    """Raised when the report is empty"""
-    pass
-
-
-class EmptyEmailAddressError(Exception):
-    """Raised when the passed email address is empty"""
-    pass
+from extensions.report_generator.report import Report
+from extensions.report_generator.excpetions import EmptyReportError, PrinterBrokenError, EmptyEmailAddressError
 
 
 def print_report(report: Report, user: User | None = None, is_printer_broken: bool = True):
