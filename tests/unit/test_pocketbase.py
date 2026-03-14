@@ -256,3 +256,16 @@ def test_get_user_from_auth_store_attribute_error(monkeypatch, mock_client):
     mock_client.auth_store.token = "t"
     mock_client.auth_store.model = {"id": 1}
     assert pb.get_user_from_auth_store() is None
+
+
+def test_get_user_from_auth_store_unexpected_error(monkeypatch, mock_client):
+    """Test getting a user from the auth store when an Unexpected Error occurs."""
+    class FaultyUser:
+        @classmethod
+        def from_pb_record(cls, record):
+            raise Exception("Unexpected Error")
+
+    monkeypatch.setattr(pb, "User", FaultyUser)
+    mock_client.auth_store.token = "t"
+    mock_client.auth_store.model = {"id": 1}
+    assert pb.get_user_from_auth_store() is None
