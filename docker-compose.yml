@@ -47,6 +47,10 @@ services:
       - MOCK_POCKETBASE=false
       - POCKETBASE_ADMIN_USERNAME=${POCKETBASE_ADMIN_USERNAME}
       - POCKETBASE_ADMIN_PASSWORD=${POCKETBASE_ADMIN_PASSWORD}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
     depends_on:
       - ollama
       - pocketbase
