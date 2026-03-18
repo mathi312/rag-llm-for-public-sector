@@ -62,3 +62,48 @@ def test_log_warning_and_error_append_lines(tmp_path, monkeypatch) -> None:
         "[2026-02-08 13:14:15] [WARNING] warn",
         "[2026-02-08 13:14:15] [ERROR] boom",
     ]
+
+def test_print_to_file_appends_without_overwrite(tmp_path) -> None:
+    """_print_to_file should append to an existing file instead of overwriting."""
+    logger = logger_module.Logger(log_dir=tmp_path)
+    logfile = tmp_path / "custom.log"
+    logfile.write_text("first\n", encoding="utf-8")
+
+    logger._print_to_file("second", logfile)
+
+    assert logfile.read_text(encoding="utf-8").splitlines() == ["first", "second"]
+
+def test_logger_creates_log_directory_as_directory(tmp_path) -> None:
+    """Logger should create log directory and it must be a directory."""
+    log_dir = tmp_path / "logs"
+    logger_module.Logger(log_dir=log_dir)
+    assert log_dir.exists()
+    assert log_dir.is_dir()
+
+
+def test_log_appends_multiple_info_lines(tmp_path, monkeypatch) -> None:
+    """Multiple log_info calls should append (not overwrite) within same daily file."""
+    _patch_datetime(monkeypatch)
+    logger = logger_module.Logger(log_dir=tmp_path)
+
+    logger.log_info("one")
+    logger.log_info("two")
+
+    logfile = tmp_path / "rag_llm_2026-02-08.log"
+    assert logfile.read_text(encoding="utf-8").splitlines() == [
+        "[2026-02-08 13:14:15] [INFO] one",
+        "[2026-02-08 13:14:15] [INFO] two",
+    ]
+
+
+def test__log_writes_given_level(tmp_path, monkeypatch) -> None:
+    """_log should respect the provided LogType (direct private method test)."""
+    _patch_datetime(monkeypatch)
+    logger = logger_module.Logger(log_dir=tmp_path)
+
+    logger._log("x", logger_module.LogType.ERROR)
+
+    logfile = tmp_path / "rag_llm_2026-02-08.log"
+    assert logfile.read_text(encoding="utf-8").splitlines() == [
+        "[2026-02-08 13:14:15] [ERROR] x"
+    ]
