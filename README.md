@@ -62,6 +62,8 @@ Open your terminal (PowerShell, Command Prompt, or Terminal) and run:
 4.  (Optional) Copy any PDF or DOCX files you want to auto-index into this `data/` folder.
 
 ### Step 3: Build the Application
+Rename docker-compose.dev.yml to docker-compose.yml
+
 Run the Docker Compose build command. This process creates the Python environment inside a container, installs `python 3.12`, and downloads all libraries defined in `requirements.txt`.
 
     docker compose build --no-cache
@@ -145,7 +147,8 @@ Open your web browser and navigate to:
     ├── models.py           # LLM Factory (Ollama/OpenAI switch)
     ├── requirements.txt    # Python Dependencies
     ├── Dockerfile          # App Container Definition
-    ├── docker-compose.yml  # Service Orchestration
+    ├── docker-compose.dev.yml  # Service Orchestration
+    ├── docker-compose.prod.yml  # Service Orchestration
     ├── extensions/         # Folder for code extension (Feature Implementation)
     ├── tests/              # Folder for test files (Test implementation)
     └── data/               # Folder for static documents (User created)
