@@ -66,6 +66,16 @@ class StubStreamlit:
         self.text_calls.append(msg)
 
 
+class DummyRecord:
+    """Simple object that mimics a PocketBase record."""
+
+    def __init__(self, id="1", email="user@example.org", name="Max", admin=False):
+        self.id = id
+        self.email = email
+        self.name = name
+        self.admin = admin
+
+
 @pytest.fixture
 def mock_client(monkeypatch):
     client = MockClient()
@@ -90,25 +100,19 @@ def test_restore_session_no_auth(monkeypatch, mock_client, stub_st):
 
 def test_restore_session_with_valid_data(mock_client, stub_st):
     """Test restoring session with valid auth data."""
-    stub_st.session_state["pb_auth"] = {"token": "t123", "model": {"id": 1}}
+    record = DummyRecord()
+    stub_st.session_state["pb_auth"] = {"token": "t123", "model": record}
     pb.restore_session()
-    assert mock_client.auth_store.token == "t123"
-    assert mock_client.auth_store.model == {"id": 1}
+    assert "user" in stub_st.session_state
+    assert stub_st.session_state["user"].email == "user@example.org"
 
 
-def test_restore_session_with_invalid_data(monkeypatch, stub_st):
+def test_restore_session_with_invalid_data(stub_st):
     """Test restoring session with invalid auth data."""
-    class FailingAuthStore(MockAuthStore):
-        """An auth store that fails on save."""
-        def save(self, token, model):
-            raise RuntimeError("fail")
-
-    client = MockClient()
-    client.auth_store = FailingAuthStore()
-    monkeypatch.setattr(pb, "client", client)
-    stub_st.session_state["pb_auth"] = {"token": "bad", "model": {}} # Invalid data
+    stub_st.session_state["pb_auth"] = {"token": "bad", "model": {}}  # Invalid data
     pb.restore_session()
     assert "pb_auth" not in stub_st.session_state
+    assert "user" not in stub_st.session_state
 
 
 def test_authenticate_user_success(monkeypatch, mock_client):
@@ -143,20 +147,20 @@ def test_logout_user(mock_client, stub_st):
     assert mock_client.auth_store.cleared is True # Auth store clear method should be called
 
 
-def test_is_authenticated(mock_client):
+def test_is_authenticated(stub_st):
     """Test authentication status check."""
-    mock_client.auth_store.token = ""
+    stub_st.session_state.pop("pb_auth", None)
     assert pb.is_authenticated() is False
-    mock_client.auth_store.token = "token"
+    stub_st.session_state["pb_auth"] = {"token": "token", "model": DummyRecord()}
     assert pb.is_authenticated() is True
 
 
-def test_show_logged_in_status_authenticated(mock_client, stub_st):
+def test_show_logged_in_status_authenticated(stub_st):
     """Test displaying logged-in status for an authenticated user."""
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = type(
-        "Model", (), {"name": "Max", "admin": True}
-    )()
+    stub_st.session_state["pb_auth"] = {
+        "token": "t",
+        "model": DummyRecord(name="Max", admin=True),
+    }
     pb.show_logged_in_status()
     assert stub_st.success_calls == [
         f"{pb.PBInfo.LOGGED_IN.value} Max"
@@ -165,18 +169,17 @@ def test_show_logged_in_status_authenticated(mock_client, stub_st):
     assert stub_st.warning_calls == []
 
 
-def test_show_logged_in_status_not_authenticated(mock_client, stub_st):
+def test_show_logged_in_status_not_authenticated(stub_st):
     """Test displaying logged-in status for a not authenticated user."""
-    mock_client.auth_store.token = ""
-    mock_client.auth_store.model = None
+    stub_st.session_state.pop("pb_auth", None)
     pb.show_logged_in_status()
     assert stub_st.warning_calls == [pb.PBInfo.NOT_AUTHENTICATED.value]
     assert stub_st.success_calls == []
 
 
-def test_user_is_admin_variants(mock_client):
+def test_user_is_admin_variants(stub_st):
     """Test checking if the user is an admin under various conditions."""
-    mock_client.auth_store.model = None
+    stub_st.session_state.pop("pb_auth", None)
     assert pb.user_is_admin() is False
 
     class WithGet(dict):
@@ -184,17 +187,17 @@ def test_user_is_admin_variants(mock_client):
         def get(self, key, default=None):
             return True
 
-    mock_client.auth_store.model = WithGet()
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": WithGet()}
     assert pb.user_is_admin() is True
 
-    mock_client.auth_store.model = type("AFalse", (), {"admin": False})() # Admin attribute false
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": type("AFalse", (), {"admin": False})()}  # Admin attribute false
     assert pb.user_is_admin() is False
 
-    mock_client.auth_store.model = type("ATrue", (), {"admin": True})() # Admin attribute true
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": type("ATrue", (), {"admin": True})()}  # Admin attribute true
     assert pb.user_is_admin() is True
 
 
-def test_get_user_from_auth_store_returns_user(monkeypatch, mock_client):
+def test_get_user_from_auth_store_returns_user(monkeypatch, stub_st):
     """Test getting a user from the auth store when token and model are present."""
     class DummyUser:
         @classmethod
@@ -202,19 +205,16 @@ def test_get_user_from_auth_store_returns_user(monkeypatch, mock_client):
             return {"user": record}
 
     monkeypatch.setattr(pb, "User", DummyUser)
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = {"id": 1}
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": {"id": 1}}
     assert pb.get_user_from_auth_store() == {"user": {"id": 1}}
 
 
-def test_get_user_from_auth_store_missing_token_or_model(mock_client):
+def test_get_user_from_auth_store_missing_token_or_model(stub_st):
     """Test getting a user from the auth store when token or model is missing."""
-    mock_client.auth_store.token = ""
-    mock_client.auth_store.model = {"id": 1}
+    stub_st.session_state["pb_auth"] = {"token": "", "model": {"id": 1}}
     assert pb.get_user_from_auth_store() is None
 
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = None
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": None}
     assert pb.get_user_from_auth_store() is None
 
 
@@ -222,16 +222,18 @@ def test_restore_session_missing_token_or_model(mock_client, stub_st):
     """Test restoring session when token or model is missing."""
     stub_st.session_state["pb_auth"] = {"token": "", "model": {"id": 1}}
     pb.restore_session()
-    assert mock_client.auth_store.token == ""
+    assert "pb_auth" not in stub_st.session_state
     stub_st.session_state["pb_auth"] = {"token": "t123", "model": None}
     pb.restore_session()
-    assert mock_client.auth_store.token == ""
+    assert "pb_auth" not in stub_st.session_state
 
 
-def test_show_logged_in_status_unknown_user(mock_client, stub_st):
+def test_show_logged_in_status_unknown_user(stub_st):
     """Test displaying logged-in status when user name is unknown."""
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = type("Model", (), {"admin": False})()
+    stub_st.session_state["pb_auth"] = {
+        "token": "t",
+        "model": type("Model", (), {"admin": False})(),
+    }
     pb.show_logged_in_status()
     assert stub_st.success_calls == [
         f"{pb.PBInfo.LOGGED_IN.value} {pb.PBInfo.UNKNOWN_USER.value}"
@@ -239,13 +241,13 @@ def test_show_logged_in_status_unknown_user(mock_client, stub_st):
     assert stub_st.text_calls == ["Admin: No"]
 
 
-def test_user_is_admin_no_attr(mock_client):
+def test_user_is_admin_no_attr(stub_st):
     """Test user admin status when model has no admin attribute."""
-    mock_client.auth_store.model = object()
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": object()}
     assert pb.user_is_admin() is False
 
 
-def test_get_user_from_auth_store_attribute_error(monkeypatch, mock_client):
+def test_get_user_from_auth_store_attribute_error(monkeypatch, stub_st):
     """Test getting a user from the auth store when an AttributeError occurs."""
     class FaultyUser:
         @classmethod
@@ -253,12 +255,11 @@ def test_get_user_from_auth_store_attribute_error(monkeypatch, mock_client):
             raise AttributeError("Attribute Error")
 
     monkeypatch.setattr(pb, "User", FaultyUser)
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = {"id": 1}
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": {"id": 1}}
     assert pb.get_user_from_auth_store() is None
 
 
-def test_get_user_from_auth_store_unexpected_error(monkeypatch, mock_client):
+def test_get_user_from_auth_store_unexpected_error(monkeypatch, stub_st):
     """Test getting a user from the auth store when an Unexpected Error occurs."""
     class FaultyUser:
         @classmethod
@@ -266,6 +267,5 @@ def test_get_user_from_auth_store_unexpected_error(monkeypatch, mock_client):
             raise Exception("Unexpected Error")
 
     monkeypatch.setattr(pb, "User", FaultyUser)
-    mock_client.auth_store.token = "t"
-    mock_client.auth_store.model = {"id": 1}
+    stub_st.session_state["pb_auth"] = {"token": "t", "model": {"id": 1}}
     assert pb.get_user_from_auth_store() is None
