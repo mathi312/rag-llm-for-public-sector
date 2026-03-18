@@ -1,12 +1,19 @@
 import smtplib
+import os
 
 from email.message import EmailMessage
 from extensions.user import User
 from extensions.report_generator.report import Report
-from extensions.report_generator.excpetions import EmptyReportError, PrinterBrokenError, EmptyEmailAddressError
+from extensions.report_generator.excpetions import (
+    EmptyReportError,
+    PrinterBrokenError,
+    EmptyEmailAddressError,
+)
 
 
-def print_report(report: Report, user: User | None = None, is_printer_broken: bool = True):
+def print_report(
+    report: Report, user: User | None = None, is_printer_broken: bool = True
+):
     """
     Prints the given report.
 
@@ -18,8 +25,10 @@ def print_report(report: Report, user: User | None = None, is_printer_broken: bo
         PrinterBrokenError: If the printer fails during printing.
     """
     if report is None:
-        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
-    
+        raise EmptyReportError(
+            "No content available for this report. Please start a conversation and try again."
+        )
+
     if is_printer_broken:
         raise PrinterBrokenError(
             "Printer currently not available. Alternatively you can send the report per mail"
@@ -39,22 +48,39 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
         EmptyEmailAddressError: If the recipient email address is empty.
     """
     if report is None:
-        raise EmptyReportError("No content available for this report. Please start a conversation and try again.")
+        raise EmptyReportError(
+            "No content available for this report. Please start a conversation and try again."
+        )
     if not to_email:
-        raise EmptyEmailAddressError("The email address is empty. Please enter a email address!")
-    
+        raise EmptyEmailAddressError(
+            "The email address is empty. Please enter a email address!"
+        )
+
     pdf = report.to_pdf(user)
 
     # Create email
     msg = EmailMessage()
-    msg['Subject'] = "LLM Chat Report"
-    msg['From'] = "report@ragllm.uni-ulm.de"
-    msg['To'] = to_email
-    msg.set_content("This is an automated email. LLM Chat Report can be found in the attachment.")
-    msg.add_attachment(pdf, maintype='application', subtype='pdf', filename='report.pdf')
+    msg["Subject"] = "LLM Chat Report"
+    # msg["From"] = "report@ragllm.uni-ulm.de"
+    msg["From"] = os.getenv("SMTP_USER")
+    msg["To"] = to_email
+    msg.set_content(
+        "This is an automated email. LLM Chat Report can be found in the attachment."
+    )
+    msg.add_attachment(
+        pdf, maintype="application", subtype="pdf", filename="report.pdf"
+    )
 
     # Send email via local SMTP server (via mailhog)
-    server = smtplib.SMTP("mailhog", 1025)
-    server.set_debuglevel(1)
+    # server = smtplib.SMTP("mailhog", 1025)
+    # server.set_debuglevel(1)
+    # server.send_message(msg)
+    # server.quit()
+
+    server = smtplib.SMTP(
+        os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587"))
+    )
+    server.starttls()
+    server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
     server.send_message(msg)
     server.quit()

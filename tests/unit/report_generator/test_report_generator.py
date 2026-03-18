@@ -39,4 +39,4 @@ def test_send_report_sends_email(smtp_mock):
 
     send_report_via_email(report=report, to_email="test@test.com")
 
-    smtp_mock.assert_called_once_with("mailhog", 1025)
+    smtp_mock.assert_called_once_with("smtp.gmail.com", 587)
