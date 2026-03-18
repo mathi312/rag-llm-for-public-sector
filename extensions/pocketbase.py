@@ -10,24 +10,33 @@ logger = Logger()
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
 
-def restore_session() -> None:
-    """Restore the user session from the auth store."""
+
+def _get_session_auth() -> dict | None:
+    """Return validated auth payload from Streamlit session state."""
     auth_data = st.session_state.get("pb_auth")
-    if not auth_data:
-        # no session to restore
-        return
-    try:
-        # validate stored session
-        token = auth_data.get("token")
-        model = auth_data.get("model")
-        if not token or model is None:
-            # invalid stored session, clear it
-            st.session_state.pop("pb_auth", None)
-            return
-        client.auth_store.save(token, model)
-    except Exception:
-        # if invalid, clear session
+    if not isinstance(auth_data, dict):
+        return None
+
+    token = auth_data.get("token")
+    model = auth_data.get("model")
+    if not token or model is None:
+        return None
+
+    return auth_data
+
+def restore_session() -> None:
+    """Restore the user session from session state data."""
+    auth_data = _get_session_auth()
+    if auth_data is None:
         st.session_state.pop("pb_auth", None)
+        st.session_state.pop("user", None)
+        return
+
+    try:
+        st.session_state["user"] = User.from_pb_record(auth_data.get("model"))
+    except Exception:
+        st.session_state.pop("pb_auth", None)
+        st.session_state.pop("user", None)
 
 
 def authenticate_user(email: str, password: str) -> dict | str:
@@ -50,15 +59,19 @@ def logout_user() -> None:
 
 def is_authenticated() -> bool:
     """Check if a user is authenticated."""
-    return bool(client.auth_store.token)
+    return _get_session_auth() is not None
 
 
 def show_logged_in_status() -> None:
     """Display the authenticated status of the user."""
-    is_logged_in = bool(client.auth_store.token)
-    if is_logged_in and client.auth_store.model:
+    auth_data = _get_session_auth()
+    if auth_data is not None:
         # Try to get the user's name from the model
-        name = getattr(client.auth_store.model, "name", None)
+        model = auth_data.get("model")
+        if isinstance(model, dict):
+            name = model.get("name")
+        else:
+            name = getattr(model, "name", None)
         st.success(f"{PBInfo.LOGGED_IN.value} {name or PBInfo.UNKNOWN_USER.value}")
         st.text(f"Admin: {'Yes' if user_is_admin() else 'No'}")
     else:
@@ -67,7 +80,8 @@ def show_logged_in_status() -> None:
 
 def user_is_admin() -> bool:
     """Check if the authenticated user is an admin."""
-    model = client.auth_store.model
+    auth_data = _get_session_auth()
+    model = auth_data.get("model") if auth_data else None
 
     if model is None:
         return False
@@ -81,13 +95,11 @@ def user_is_admin() -> bool:
 def get_user_from_auth_store() -> User | None:
     """Restore the user from the auth store."""
     try:
-        if not client.auth_store.token:
+        auth_data = _get_session_auth()
+        if auth_data is None:
             return None
 
-        if not client.auth_store.model:
-            return None
-
-        user = User.from_pb_record(client.auth_store.model)
+        user = User.from_pb_record(auth_data.get("model"))
         return user
 
     except AttributeError as e:

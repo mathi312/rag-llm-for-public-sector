@@ -1,6 +1,5 @@
 import streamlit as st
 import re
-import json
 from extensions.pocketbase import *
 from extensions.pocketbase_messages import PBError, PBWarning, PBSuccess
 from extensions.user import User
@@ -16,7 +15,6 @@ st.caption("Enter your credentials below.")
 with st.form("login_form"):
     email = st.text_input("E-Mail")
     password = st.text_input("Password", type="password")
-    remember = st.checkbox("Remember me", value=True)
 
     submitted = st.form_submit_button("Login", use_container_width=True)
 
@@ -29,16 +27,12 @@ with st.form("login_form"):
         else:
             auth_result = authenticate_user(email, password)
             if auth_result != PBError.AUTHENTICATION_FAILED.name:
-                client.auth_store.save(auth_result.token, auth_result.record)
-
                 user = User.from_pb_record(auth_result.record)
                 st.session_state.user = user
-
-                if remember:
-                    st.session_state["pb_auth"] = {
-                        "token": auth_result.token,
-                        "model": auth_result.record,
-                    }
+                st.session_state["pb_auth"] = {
+                    "token": auth_result.token,
+                    "model": auth_result.record,
+                }
 
                 logger.log_info(f"User '{user.email}' logged in successfully.")
 
