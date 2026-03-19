@@ -1,92 +1,12 @@
-version: '3.8'
-
 services:
-  # Ollama service (the LLM backend)
   ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
     ports:
       - "127.0.0.1:11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Streamlit RAG app
   rag-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: rag-app
     ports:
       - "127.0.0.1:8501:8501"
-    volumes:
-      # Persist the vector database so restart doesn't lose data
-      - ./faiss_index:/app/faiss_index
-      # Mount local 'data' folder for static file ingestion
-      - ./data:/app/data
-      - ./logs:/app/logs
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - POCKETBASE_URL=http://pocketbase:8080
-      - MOCK_POCKETBASE=false
-      - POCKETBASE_ADMIN_USERNAME=${POCKETBASE_ADMIN_USERNAME}
-      - POCKETBASE_ADMIN_PASSWORD=${POCKETBASE_ADMIN_PASSWORD}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-    depends_on:
-      - ollama
-      - pocketbase
-    restart: unless-stopped
 
-  # PocketBase service (The user and data management backend)
   pocketbase:
-    build:
-      context: ./pocketbase # Dockerfile is in the pocketbase directory
-      dockerfile: Dockerfile # Specify the Dockerfile
-    container_name: pocketbase
     ports:
       - "127.0.0.1:8080:8080"
-    volumes:
-        - "./pocketbase-data:/pb/pb_data"  # Attaches pb_data to a volume named 'pocketbase-data'
-    restart: unless-stopped
-
-  rag-app-test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    entrypoint: ["pytest", "tests/unit"]
-    environment:
-      - PYTHONPATH=/app
-    volumes:
-      - ./:/app
-    profiles:
-      - unit-test
-
-  rag-app-integration-test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    entrypoint: ["pytest", "tests/integration"]
-    environment:
-      - PYTHONPATH=/app
-      - BASE_URL=http://rag-app:8501
-      - POCKETBASE_URL=http://pocketbase:8080
-      - POCKETBASE_ADMIN_USERNAME=${POCKETBASE_ADMIN_USERNAME}
-      - POCKETBASE_ADMIN_PASSWORD=${POCKETBASE_ADMIN_PASSWORD}
-    working_dir: /app
-    volumes:
-      - ./:/app
-    depends_on:
-      - rag-app
-    profiles:
-      - integration-test
-
-volumes:
-  ollama_data:

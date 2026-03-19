@@ -20,6 +20,7 @@
 # --- 3. Whitelist Configuration & Deployment Files ---
 !requirements.txt
 !Dockerfile
+!docker-compose.yml
 !docker-compose.prod.yml
 !docker-compose.dev.yml
 !README.md
