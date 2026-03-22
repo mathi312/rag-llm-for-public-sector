@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from extensions.example_questions.question import Question
-from extensions.example_questions.question_repository import QuestionRepository
-from extensions.example_questions.exceptions import (
+from extensions.predefined_questions.question import Question
+from extensions.predefined_questions.question_repository import QuestionRepository
+from extensions.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionFetchError,
     QuestionUpdateError
@@ -25,7 +25,7 @@ def make_pb_list(*records) -> MagicMock:
 @pytest.fixture(autouse=True)
 def reset_client():
     """Patch CLIENT before every test."""
-    with patch("extensions.example_questions.question_repository.CLIENT") as mock:
+    with patch("extensions.predefined_questions.question_repository.CLIENT") as mock:
         yield mock
 
 

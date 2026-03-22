@@ -6,7 +6,7 @@ from extensions.documentupload import (
     confirm_delete_document,
     view_pdf_dialog
 )
-from extensions.example_questions.question_controller import generate_questions
+from extensions.predefined_questions.question_controller import generate_questions
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
