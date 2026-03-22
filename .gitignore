@@ -32,11 +32,18 @@
 # --- 4. Whitelist Data Directory Structure (but not content) ---
 !data/
 !data/.gitkeep
+!pocketbase/pb_migrations/
+!pocketbase/pb_migrations/**
 
 # --- 5. Whitelist CI/CD Pipeline ---
 !.gitlab-ci.yml
 
 # --- 6. Explicitly Ignore Generated Artifacts ---
+# PocketBase runtime DB/files (local state only)
+pocketbase-data/
+
+# Local generated outputs
+coverage_html_report/
 faiss_index/
 venv/
 __pycache__/

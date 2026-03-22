@@ -47,6 +47,7 @@ services:
     container_name: pocketbase
     volumes:
       - "./pocketbase-data:/pb/pb_data"
+      - "./pocketbase/pb_migrations:/pb/pb_migrations"
     restart: unless-stopped
 
   rag-app-test:
