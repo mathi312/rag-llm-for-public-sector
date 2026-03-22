@@ -1,5 +1,5 @@
 import streamlit as st
-from extensions.documentupload import (
+from extensions.documents.documentupload import (
     upload_document,
     list_documents,
     update_document,
@@ -80,10 +80,16 @@ if docs:
 
         # Edit
         if cols[8].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
+            raw_version = doc.get("version")
+            try:
+                next_version = str(int(raw_version) + 1)
+            except (TypeError, ValueError):
+                next_version = str(raw_version or "1")
+
             update_document(
                 record_id=doc["id"],
                 title=doc.get("title"),
-                version=doc.get("version") + 1,
+                version=next_version,
                 needed_id=doc.get("needed_id"),
                 original_name=doc.get("original_name"),
                 document_name=doc.get("document"),

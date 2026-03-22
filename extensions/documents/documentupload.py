@@ -1,6 +1,8 @@
 import os
 import tempfile
 import mimetypes
+import io
+import zipfile
 from pathlib import Path
 from pocketbase import PocketBase
 from pocketbase.client import FileUpload
@@ -11,13 +13,91 @@ import docx2txt
 import shutil
 import re
 from datetime import datetime
+import hashlib
+from extensions.documents import DocumentController, build_document_controller
+from extensions.logger import Logger
+from extensions.pocketbase.pocketbase_messages import PBLog
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = PocketBase(pb_url)
+logger = Logger()
 
-client.admins.auth_with_password(
-    os.getenv("POCKETBASE_ADMIN_USERNAME"), os.getenv("POCKETBASE_ADMIN_PASSWORD")
-)
+ALLOWED_DOCUMENT_SUFFIXES = {".pdf", ".docx"}
+ALLOWED_DOCUMENT_MIME_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/octet-stream",
+}
+
+
+def _session_authenticated_client() -> PocketBase:
+    """Return a client authenticated with current session token if available."""
+    auth_data = st.session_state.get("pb_auth")
+    if not isinstance(auth_data, dict):
+        return client
+
+    token = auth_data.get("token")
+    model = auth_data.get("model")
+    if not token or model is None:
+        return client
+
+    scoped_client = PocketBase(pb_url)
+    auth_store = getattr(scoped_client, "auth_store", None)
+    if auth_store is None or not hasattr(auth_store, "save"):
+        return client
+
+    try:
+        auth_store.save(token, model)
+        return scoped_client
+    except Exception as exc:
+        logger.log_warning(PBLog.RESTORE_AUTH_FROM_STORE_FAILED.value.format(error=exc))
+        return client
+
+
+def _document_controller() -> DocumentController:
+    module_parent = Path(__file__).resolve().parent
+    if module_parent.name == "documents":
+        project_root = module_parent.parent.parent
+    else:
+        project_root = module_parent.parent
+    data_dir = project_root / "data"
+    return build_document_controller(_session_authenticated_client(), data_dir)
+
+
+def _is_pdf_bytes(content: bytes) -> bool:
+    return content.startswith(b"%PDF-")
+
+
+def _is_docx_bytes(content: bytes) -> bool:
+    # DOCX files are ZIP archives and should contain typical OOXML entries.
+    if not content.startswith(b"PK"):
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(content), "r") as zf:
+            names = set(zf.namelist())
+            return "[Content_Types].xml" in names and any(
+                name.startswith("word/") for name in names
+            )
+    except Exception:
+        return False
+
+
+def validate_document_upload(name: str, mime_type: str | None, content: bytes) -> tuple[bool, str | None]:
+    suffix = Path(name or "").suffix.lower()
+    if suffix not in ALLOWED_DOCUMENT_SUFFIXES:
+        return False, "Only PDF and DOCX files are allowed."
+
+    normalized_mime = (mime_type or "application/octet-stream").lower()
+    if normalized_mime not in ALLOWED_DOCUMENT_MIME_TYPES:
+        return False, "Invalid file type. Please upload a valid PDF or DOCX file."
+
+    if suffix == ".pdf" and not _is_pdf_bytes(content):
+        return False, "Invalid PDF file signature."
+
+    if suffix == ".docx" and not _is_docx_bytes(content):
+        return False, "Invalid DOCX file signature."
+
+    return True, None
 
 
 @st.dialog("Upload Document")
@@ -35,81 +115,89 @@ def upload_document():
     title_filled = bool(title and title.strip())
 
     identical = False
+    is_valid_upload = True
     file_bytes = None
 
     # Check for identical or similar documents before allowing upload, to prevent duplicates and provide user feedback on potential matches.
     if uploaded_file:
         file_bytes = uploaded_file.getvalue()
-        temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
-        data_dir = Path(__file__).resolve().parent.parent / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
+        is_valid_upload, validation_error = validate_document_upload(
+            uploaded_file.name,
+            uploaded_file.type,
+            file_bytes,
+        )
+        if not is_valid_upload:
+            st.error(validation_error or "Invalid file.")
+        else:
+            document_controller = _document_controller()
+            temp_file_path = document_controller.create_temp_copy(uploaded_file.name, file_bytes)
 
-        try:
-            # Save the uploaded file to a temporary location for comparison
-            with open(temp_file_path, "wb") as temp_file:
-                temp_file.write(file_bytes)
-
-            is_identical, similar = compare_with_existing_documents(
-                temp_file_path, data_dir, similarity_threshold=0.85
-            )
-            if is_identical:
-                identical = True
-                st.error(
-                    "Upload aborted: Content is identical to an existing document."
+            try:
+                is_identical, similar = compare_with_existing_documents(
+                    temp_file_path, document_controller.data_dir, similarity_threshold=0.85
                 )
+                if is_identical:
+                    identical = True
+                    st.error(
+                        "Upload aborted: Content is identical to an existing document."
+                    )
 
-            if similar:
-                p, ratio, diff = similar
-                st.warning(
-                    f"Similar document found: {p.name} (Similarity: {ratio:.0%})."
-                )
-                with st.expander("Show diff"):
-                    st.code(diff or "No diff available.", language="diff")
-        finally:
-            # Cleanup temp file
-            if temp_file_path.exists():
-                temp_file_path.unlink()
+                if similar:
+                    p, ratio, diff = similar
+                    st.warning(
+                        f"Similar document found: {p.name} (Similarity: {ratio:.0%})."
+                    )
+                    with st.expander("Show diff"):
+                        st.code(diff or "No diff available.", language="diff")
+            finally:
+                # Cleanup temp file
+                if temp_file_path.exists():
+                    temp_file_path.unlink()
 
     if (
-        st.button("Upload", disabled=identical or not uploaded_file or not title_filled)
+        st.button(
+            "Upload",
+            disabled=identical or not uploaded_file or not title_filled or not is_valid_upload,
+        )
         and uploaded_file
     ):
         if not title_filled:
             st.error("Bitte einen Titel eingeben.")
             return None
+        if not is_valid_upload:
+            st.error("Only valid PDF and DOCX files are allowed.")
+            return None
         with st.spinner("Uploading document..."):
-            temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
-            data_dir = Path(__file__).resolve().parent.parent / "data"
-            data_dir.mkdir(parents=True, exist_ok=True)
+            document_controller = _document_controller()
+            temp_file_path = document_controller.create_temp_copy(
+                uploaded_file.name,
+                uploaded_file.getvalue(),
+            )
             try:
-                with open(temp_file_path, "wb") as temp_file:
-                    temp_file.write(uploaded_file.getvalue())
-
-                client.collection("documents").create(
-                    {
-                        "title": title,
-                        "version": version,
-                        "needed_id": needed_id,
-                        "original_name": uploaded_file.name,
-                        "document": FileUpload(
-                            (
-                                str(temp_file_path),
-                                uploaded_file.name,
-                                uploaded_file.type or "application/octet-stream",
-                            )
-                        ),
-                    }
+                document_controller.create_record(
+                    title=title,
+                    version=version,
+                    needed_id=needed_id,
+                    original_name=uploaded_file.name,
+                    local_path=str(temp_file_path),
+                    mime_type=uploaded_file.type or "application/octet-stream",
+                    file_upload=FileUpload(
+                        (
+                            str(temp_file_path),
+                            uploaded_file.name,
+                            uploaded_file.type or "application/octet-stream",
+                        )
+                    ),
                 )
 
-                dest_path = data_dir / uploaded_file.name
-                with open(temp_file_path, "rb") as src, open(dest_path, "wb") as dst:
-                    dst.write(src.read())
+                document_controller.save_to_data_dir(temp_file_path, uploaded_file.name)
 
                 st.session_state["upload_success_msg"] = (
                     "Document uploaded successfully."
                 )
                 st.rerun()
             except Exception as e:
+                logger.log_error(f"Failed to upload document '{uploaded_file.name}': {e}")
                 st.error(f"Failed to upload document: {e}")
             finally:
                 if temp_file_path.exists():
@@ -118,10 +206,10 @@ def upload_document():
 
 
 def list_documents() -> list[dict]:
-    """List all documents from PocketBase."""
+    """List all documents from PocketBase, sorted by most recently updated first."""
     try:
-        records = client.collection("documents").get_full_list()
-        return [
+        records = _document_controller().list_records()
+        docs = [
             {
                 "id": r.id,
                 "title": getattr(r, "title", None),
@@ -134,7 +222,11 @@ def list_documents() -> list[dict]:
             }
             for r in records
         ]
+        # Sort by updated timestamp (newest first)
+        docs.sort(key=lambda x: x.get("updated") or x.get("created") or "", reverse=True)
+        return docs
     except Exception as e:
+        logger.log_error(f"Failed to fetch documents list: {e}")
         st.error(f"Failed to fetch documents: {e}")
         return []
 
@@ -152,11 +244,7 @@ def confirm_delete_document(
     col1, col2 = st.columns(2, gap="small")
     with col1:
         if st.button("Yes, delete", use_container_width=True):
-            ok = delete_document(
-                record_id=record_id,
-                document_name=document_name,
-                original_name=original_name,
-            )
+            ok = delete_document(record_id=record_id)
             if ok:
                 st.session_state["upload_success_msg"] = "Document deleted."
             st.rerun()
@@ -166,25 +254,57 @@ def confirm_delete_document(
     return False
 
 
-def delete_document(
-    record_id: str, document_name: str | None = None, original_name: str | None = None
-) -> bool:
-    """Delete a document record and remove matching files from data/."""
-    data_dir = Path(__file__).resolve().parent.parent / "data"
+def delete_document(record_id: str) -> bool:
+    """Delete a document record and remove all associated files (data and backups).
+    
+    Uses record_id to find and delete:
+    - Main document file from data/
+    - All backup versions from data/backup/ (regardless of filename changes over time)
+    """
+    document_controller = _document_controller()
+    original_name = None
+    
+    # First, retrieve the record to get the original filename
+    try:
+        records = document_controller.list_records()
+        for record in records:
+            if record.id == record_id:
+                original_name = getattr(record, "original_name", None)
+                break
+    except Exception as e:
+        logger.log_warning(f"Could not retrieve original filename for record '{record_id}': {e}")
+    
+    # Delete the PocketBase record
     processed = False
     try:
-        client.collection("documents").delete(record_id)
+        document_controller.delete_record(record_id)
         processed = True
     except Exception as e:
+        logger.log_error(f"Failed to delete document record '{record_id}': {e}")
         st.error(f"Failed to delete document: {e}")
-    for name in {document_name, original_name}:
-        if name:
-            path = data_dir / name
-            if path.exists():
-                try:
-                    path.unlink()
-                except Exception as e:
-                    st.warning(f"Could not delete file {name}: {e}")
+    
+    # Delete the main file from data_dir (if we know its name)
+    if original_name:
+        try:
+            document_controller.delete_from_data_dir({original_name})
+        except Exception as e:
+            logger.log_warning(f"Could not delete main document file for record '{record_id}': {e}")
+    
+    # Delete all backups for this document (search by record_id prefix)
+    try:
+        backup_dir = document_controller.backup_dir
+        
+        if backup_dir and backup_dir.exists():
+            # Find and delete all backups that start with {record_id}_v
+            # This works regardless of how many times the file was renamed
+            for backup_file in backup_dir.iterdir():
+                if backup_file.is_file() and backup_file.name.startswith(f"{record_id}_v"):
+                    backup_file.unlink()
+                    logger.log_info(f"Deleted backup: {backup_file.name}")
+    except Exception as e:
+        logger.log_error(f"Could not delete backup files for record '{record_id}': {e}")
+        st.error(f"Could not delete backup files: {e}")
+    
     return processed
 
 
@@ -192,10 +312,24 @@ def extract_text_from_file(file_path: Path) -> str:
     """Extract text content from a pdf or docx file."""
     suffix = file_path.suffix.lower()
     if suffix == ".pdf":
-        reader = PdfReader(str(file_path))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        try:
+            reader = PdfReader(str(file_path))
+            return "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as exc:
+            logger.log_warning(f"Could not read PDF '{file_path}': {exc}")
+            try:
+                return file_path.read_bytes().decode("utf-8", errors="ignore")
+            except Exception:
+                return ""
     if suffix == ".docx":
-        return docx2txt.process(str(file_path)) or ""
+        try:
+            return docx2txt.process(str(file_path)) or ""
+        except Exception as exc:
+            logger.log_warning(f"Could not read DOCX '{file_path}': {exc}")
+            try:
+                return file_path.read_bytes().decode("utf-8", errors="ignore")
+            except Exception:
+                return ""
     # Fallback: bytes -> string (ignoring errors)
     try:
         return file_path.read_bytes().decode("utf-8", errors="ignore")
@@ -211,6 +345,26 @@ def build_diff(fst_text: str, snd_text: str, fromfile: str, tofile: str) -> str:
         fst_lines, snd_lines, fromfile=fromfile, tofile=tofile, lineterm=""
     )
     return "\n".join(diff)
+
+
+def build_binary_diff(old_path: Path, new_path: Path) -> str:
+    """Build a compact binary diff summary when textual extraction is unavailable."""
+    old_bytes = old_path.read_bytes()
+    new_bytes = new_path.read_bytes()
+
+    old_hash = hashlib.sha256(old_bytes).hexdigest()[:12]
+    new_hash = hashlib.sha256(new_bytes).hexdigest()[:12]
+
+    return "\n".join(
+        [
+            f"--- ALT(bin): {old_path.name}",
+            f"+++ NEU(bin): {new_path.name}",
+            "@@ Binary comparison @@",
+            f"- size: {len(old_bytes)} bytes, sha256: {old_hash}",
+            f"+ size: {len(new_bytes)} bytes, sha256: {new_hash}",
+            "! No extractable text found; showing binary-level comparison.",
+        ]
+    )
 
 
 def compare_with_existing_documents(
@@ -257,15 +411,54 @@ def compare_with_existing_documents(
 
 def get_backup_dir() -> Path:
     """Get the backup directory path, creating it if it doesn't exist."""
-    backup_dir = Path(__file__).resolve().parent.parent / "data" / "backup"
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    return backup_dir
+    return _document_controller().backup_dir
 
 
 def make_backup_name(record_id: str, version: str, original_name: str) -> str:
     """Create a backup filename based on record ID, version, and original name."""
     safe_version = str(version).strip().replace(" ", "_")
     return f"{record_id}_v{safe_version}_{original_name}"
+
+
+def find_current_document_version(
+    record_id: str,
+    current_version: str,
+    existing_name: str,
+    data_dir: Path,
+    backup_dir: Path,
+) -> Path | None:
+    """
+    Find the current version of a document.
+    First check data_dir, then check backup_dir for the current version.
+    If not found, search for ANY backup with the matching filename (most recent).
+    Returns the Path if found, None otherwise.
+    """
+    if not existing_name:
+        return None
+
+    # Check data_dir first
+    data_path = data_dir / existing_name
+    if data_path.exists():
+        return data_path
+
+    # Check backup_dir for the exact record_id + current version
+    backup_pattern = make_backup_name(record_id, current_version or "current", existing_name)
+    backup_path = backup_dir / backup_pattern
+    if backup_path.exists():
+        return backup_path
+
+    # Fallback: Search for ANY backup with the matching filename (most recent by mtime)
+    if backup_dir.exists():
+        matching_backups = []
+        for p in backup_dir.iterdir():
+            if p.is_file() and p.name.endswith(existing_name):
+                matching_backups.append(p)
+        
+        if matching_backups:
+            # Return the most recently modified one
+            return max(matching_backups, key=lambda p: p.stat().st_mtime)
+
+    return None
 
 
 def parse_backup_name(record_id: str, filename: str) -> tuple[str, str] | None:
@@ -306,32 +499,54 @@ def update_document(
         "Choose a document to upload", type=["pdf", "docx"]
     )
 
-    data_dir = Path(__file__).resolve().parent.parent / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    backup_dir = get_backup_dir()
+    uploaded_bytes = None
+    is_valid_upload = True
+    if uploaded_file:
+        uploaded_bytes = uploaded_file.getvalue()
+        is_valid_upload, validation_error = validate_document_upload(
+            uploaded_file.name,
+            uploaded_file.type,
+            uploaded_bytes,
+        )
+        if not is_valid_upload:
+            st.error(validation_error or "Invalid file.")
+
+    document_controller = _document_controller()
+    data_dir = document_controller.data_dir
+    backup_dir = document_controller.backup_dir
 
     # Determine existing file path for diffing
     existing_name = original_name or document_name
-    existing_path = data_dir / existing_name if existing_name else None
+    existing_path = find_current_document_version(
+        record_id, current_version, existing_name, data_dir, backup_dir
+    )
 
     diff_text = ""
     identical = False
-    if uploaded_file and existing_path and existing_path.exists():
-        temp_compare_path = Path(tempfile.gettempdir()) / uploaded_file.name
-        with open(temp_compare_path, "wb") as temp_file:
-            temp_file.write(uploaded_file.getvalue())
+    if uploaded_file and is_valid_upload and existing_path and existing_path.exists():
+        temp_compare_path = document_controller.create_temp_copy(
+            uploaded_file.name,
+            uploaded_bytes or b"",
+        )
 
         old_text = extract_text_from_file(existing_path)
         new_text = extract_text_from_file(temp_compare_path)
-        identical = old_text.strip() == new_text.strip()
+        old_text_clean = old_text.strip()
+        new_text_clean = new_text.strip()
+        if old_text_clean or new_text_clean:
+            identical = old_text_clean == new_text_clean
+        else:
+            identical = existing_path.read_bytes() == temp_compare_path.read_bytes()
 
-        if not identical:
+        if not identical and (old_text_clean or new_text_clean):
             diff_text = build_diff(
                 old_text,
                 new_text,
                 fromfile=f"ALT: {existing_path.name}",
                 tofile=f"NEU: {uploaded_file.name}",
             )
+        elif not identical:
+            diff_text = build_binary_diff(existing_path, temp_compare_path)
 
         # Cleanup temp file
         if temp_compare_path.exists():
@@ -346,7 +561,7 @@ def update_document(
     confirm_update = st.checkbox(
         "Allow update (Please review and confirm changes)",
         value=False,
-        disabled=identical or not uploaded_file,
+        disabled=identical or not uploaded_file or not is_valid_upload,
     )
 
     show_version_list(
@@ -368,6 +583,7 @@ def update_document(
     update_disabled = (
         (not changed)
         or bool(uploaded_file and identical)
+        or bool(uploaded_file and not is_valid_upload)
         or (bool(uploaded_file) and not confirm_update)
     )
 
@@ -376,6 +592,9 @@ def update_document(
             st.warning(
                 "Update aborted. Your document is identical in content or changes were not confirmed."
             )
+            return False
+        if uploaded_file and not is_valid_upload:
+            st.warning("Update aborted. Only valid PDF and DOCX files are allowed.")
             return False
 
         payload: dict = {}
@@ -394,9 +613,10 @@ def update_document(
             mime = None
 
             if uploaded_file:
-                temp_file_path = Path(tempfile.gettempdir()) / uploaded_file.name
-                with open(temp_file_path, "wb") as temp_file:
-                    temp_file.write(uploaded_file.getvalue())
+                temp_file_path = document_controller.create_temp_copy(
+                    uploaded_file.name,
+                    uploaded_bytes or b"",
+                )
                 local_path = temp_file_path
                 fname = uploaded_file.name
                 mime = uploaded_file.type or "application/octet-stream"
@@ -409,27 +629,25 @@ def update_document(
             if local_path:
                 payload["document"] = FileUpload((str(local_path), fname, mime))
 
-            # Move old file to backup before updating
-            old_name = original_name or document_name
-            if old_name:
-                old_path = data_dir / old_name
-                if old_path.exists():
+            # Move old file to backup ONLY if a new file is being uploaded
+            if uploaded_file:
+                old_name = original_name or document_name
+                if old_name:
                     backup_name = make_backup_name(
-                        record_id, current_version or "current", old_path.name
+                        record_id, current_version or "current", old_name
                     )
-                    shutil.move(str(old_path), str(backup_dir / backup_name))
+                    document_controller.move_to_backup(old_name, backup_name)
 
-            client.collection("documents").update(record_id, payload)
+            document_controller.update_record(record_id, payload)
 
             # save new file to data/ if it was uploaded
             if local_path and local_path.exists():
-                dest_path = data_dir / fname
-                with open(local_path, "rb") as src, open(dest_path, "wb") as dst:
-                    dst.write(src.read())
+                document_controller.save_to_data_dir(local_path, fname)
 
             st.session_state["upload_success_msg"] = "Document updated."
             st.rerun()
         except Exception as e:
+            logger.log_error(f"Failed to update document '{record_id}': {e}")
             st.error(f"Failed to update document: {e}")
             return False
         finally:
@@ -504,6 +722,7 @@ def show_version_list(
                 st.session_state["upload_success_msg"] = "Version restored."
                 st.rerun()
             except Exception as e:
+                logger.log_error(f"Error restoring document version for '{record_id}': {e}")
                 st.error(f"Error restoring version: {e}")
                 return False
 

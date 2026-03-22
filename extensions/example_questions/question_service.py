@@ -4,7 +4,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
 from extensions.example_questions.question_repository import QuestionRepository
-from extensions.documentupload import extract_text_from_file
+from extensions.documents.documentupload import extract_text_from_file
 from extensions.example_questions.question import Question
 from extensions.example_questions.exceptions import (
     QuestionFetchError,

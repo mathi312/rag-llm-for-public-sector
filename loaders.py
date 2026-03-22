@@ -101,12 +101,12 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         # Mapping: Dateiname -> benötigte Ausweisarten
     needed_id_map: dict[str, list[str]] = {}
     try:
-        from extensions.documentupload import list_documents
+        from extensions.documents.documentupload import list_documents
 
         for rec in list_documents():
             ids = rec.get("needed_id") or []
             original_name = rec.get("original_name")
-            document_name = rec.get("document_name")
+            document_name = rec.get("document") or rec.get("document_name")
 
             if original_name:
                 needed_id_map[original_name] = ids
