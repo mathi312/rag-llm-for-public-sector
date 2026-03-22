@@ -182,6 +182,26 @@ Access Pocketbase under http://127.0.0.1:8080/_/
 >
 > Docker Compose (pocketbase service) must be running in the background for this to work.
 
+### 7.1 Persist collection schema and API rules with migrations
+
+To avoid manually recreating collections/rules after a fresh pull or deployment,
+PocketBase migrations are now versioned in `pocketbase/pb_migrations`.
+
+After changing collections/rules in the PocketBase Dashboard, generate a snapshot migration:
+
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml exec pocketbase /pb/pocketbase migrate collections
+
+This writes a new migration file into `pocketbase/pb_migrations/`. Commit that file to git.
+
+Recommended team workflow:
+
+1. Edit schema/rules in Dashboard.
+2. Run `migrate collections` command above.
+3. Commit the generated file in `pocketbase/pb_migrations/`.
+4. Rebuild and restart containers.
+
+On a fresh environment (empty `pocketbase-data`), PocketBase applies unapplied migrations automatically on startup.
+
 ## 8. MailHog
 
 Access Mailhog under http://127.0.0.1:8025
