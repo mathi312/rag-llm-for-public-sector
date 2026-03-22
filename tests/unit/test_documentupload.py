@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from extensions.documentupload import upload_document
+from extensions.documents.documentupload import upload_document
 from extensions import pocketbase as pb
 from pathlib import Path
 
@@ -51,7 +51,7 @@ class DummyCM:
     def __exit__(self, exc_type, exc, tb): return False
 
 def test_upload_document_no_file_does_not_create(monkeypatch):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     upload_fn = getattr(du.upload_document, "__wrapped__", du.upload_document)
 
@@ -86,7 +86,7 @@ class DummyCM:
     def __exit__(self, exc_type, exc, tb): return False
 
 def test_upload_document_success_creates_record_and_saves_file(monkeypatch, tmp_path):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     upload_fn = getattr(du.upload_document, "__wrapped__", du.upload_document)
 
@@ -108,7 +108,7 @@ def test_upload_document_success_creates_record_and_saves_file(monkeypatch, tmp_
     uploaded = MagicMock()
     uploaded.name = "test.pdf"
     uploaded.type = "application/pdf"
-    uploaded.getvalue.return_value = b"hello world"
+    uploaded.getvalue.return_value = b"%PDF-1.4\nhello world\n%%EOF"
     monkeypatch.setattr(du.st, "file_uploader", MagicMock(return_value=uploaded))
 
     # Duplicate check aus
@@ -152,7 +152,7 @@ def test_upload_document_success_creates_record_and_saves_file(monkeypatch, tmp_
     # Datei in data/ gespeichert?
     saved = tmp_path / "data" / "test.pdf"
     assert saved.exists()
-    assert saved.read_bytes() == b"hello world"
+    assert saved.read_bytes() == b"%PDF-1.4\nhello world\n%%EOF"
 
     # temp file weg?
     assert not (tmp_tmp / "test.pdf").exists()
@@ -167,7 +167,7 @@ class DummyCM:
     def __exit__(self, exc_type, exc, tb): return False
 
 def test_upload_document_identical_aborts(monkeypatch, tmp_path):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     upload_fn = getattr(du.upload_document, "__wrapped__", du.upload_document)
 
@@ -178,7 +178,7 @@ def test_upload_document_identical_aborts(monkeypatch, tmp_path):
     uploaded = MagicMock()
     uploaded.name = "dup.pdf"
     uploaded.type = "application/pdf"
-    uploaded.getvalue.return_value = b"same content"
+    uploaded.getvalue.return_value = b"%PDF-1.4\nsame content\n%%EOF"
     monkeypatch.setattr(du.st, "file_uploader", MagicMock(return_value=uploaded))
 
     # Identisch melden
@@ -213,7 +213,7 @@ class DummyCM:
     def __exit__(self, exc_type, exc, tb): return False
 
 def test_upload_document_similar_shows_warning_and_diff(monkeypatch, tmp_path):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     upload_fn = getattr(du.upload_document, "__wrapped__", du.upload_document)
 
@@ -223,7 +223,7 @@ def test_upload_document_similar_shows_warning_and_diff(monkeypatch, tmp_path):
     uploaded = MagicMock()
     uploaded.name = "new.pdf"
     uploaded.type = "application/pdf"
-    uploaded.getvalue.return_value = b"new content"
+    uploaded.getvalue.return_value = b"%PDF-1.4\nnew content\n%%EOF"
     monkeypatch.setattr(du.st, "file_uploader", MagicMock(return_value=uploaded))
 
     similar = (Path("existing.pdf"), 0.90, "--- diff ---")
@@ -260,7 +260,7 @@ class DummyCM:
     def __exit__(self, exc_type, exc, tb): return False
 
 def test_upload_document_requires_title(monkeypatch):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     upload_fn = getattr(du.upload_document, "__wrapped__", du.upload_document)
 
@@ -271,7 +271,7 @@ def test_upload_document_requires_title(monkeypatch):
     uploaded = MagicMock()
     uploaded.name = "x.pdf"
     uploaded.type = "application/pdf"
-    uploaded.getvalue.return_value = b"x"
+    uploaded.getvalue.return_value = b"%PDF-1.4\nx\n%%EOF"
     monkeypatch.setattr(du.st, "file_uploader", MagicMock(return_value=uploaded))
 
     monkeypatch.setattr(du, "compare_with_existing_documents", MagicMock(return_value=(False, None)))
@@ -307,7 +307,7 @@ def test_upload_document_requires_title(monkeypatch):
 # -------------------------
 
 def test_show_version_list_restore_happy_path(monkeypatch, tmp_path):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     record_id = "RID"
     data_dir = tmp_path / "data"
@@ -368,7 +368,7 @@ def test_show_version_list_restore_happy_path(monkeypatch, tmp_path):
 
 
 def test_show_version_list_restore_update_fails_shows_error(monkeypatch, tmp_path):
-    import extensions.documentupload as du
+    import extensions.documents.documentupload as du
 
     record_id = "RID"
     data_dir = tmp_path / "data"

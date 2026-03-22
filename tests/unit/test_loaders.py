@@ -144,7 +144,7 @@ class TestLoadDirectoryDocuments:
         (tmp_path / "report.pdf").write_bytes(b"%PDF fake")
         fake_doc = make_doc()
 
-        with patch("extensions.documentupload.list_documents", return_value=[]), \
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]), \
              patch("loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
@@ -157,7 +157,7 @@ class TestLoadDirectoryDocuments:
         (tmp_path / "contract.docx").write_bytes(b"PK fake docx")
         fake_doc = make_doc()
 
-        with patch("extensions.documentupload.list_documents", return_value=[]), \
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]), \
              patch("loaders.Docx2txtLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
@@ -175,7 +175,7 @@ class TestLoadDirectoryDocuments:
         pdf_doc = make_doc("from pdf")
         docx_doc = make_doc("from docx")
 
-        with patch("extensions.documentupload.list_documents", return_value=[]), \
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]), \
             patch("loaders.PyPDFLoader") as MockPDF, \
             patch("loaders.Docx2txtLoader") as MockDOCX:
 
@@ -191,7 +191,7 @@ class TestLoadDirectoryDocuments:
         (tmp_path / "readme.txt").write_text("ignored")
         (tmp_path / "data.csv").write_text("ignored")
 
-        with patch("extensions.documentupload.list_documents", return_value=[]):
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]):
             result = load_directory_documents(tmp_path)
 
         assert result == []
@@ -199,7 +199,7 @@ class TestLoadDirectoryDocuments:
     def test_exception_during_loader_construction_skips_file(self, tmp_path):
         (tmp_path / "doc.pdf").write_bytes(b"%PDF fake")
 
-        with patch("extensions.documentupload.list_documents", return_value=[]), \
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]), \
              patch("loaders.PyPDFLoader", side_effect=Exception("init error")):
 
             result = load_directory_documents(tmp_path)
@@ -209,7 +209,7 @@ class TestLoadDirectoryDocuments:
     def test_ignores_subdirectories(self, tmp_path):
         (tmp_path / "subdir").mkdir()
 
-        with patch("extensions.documentupload.list_documents", return_value=[]):
+        with patch("extensions.documents.documentupload.list_documents", return_value=[]):
             result = load_directory_documents(tmp_path)
 
         assert result == []
@@ -224,7 +224,7 @@ class TestNeededIdMetadata:
         loader_patch = "loaders.PyPDFLoader" if filename.endswith(".pdf") \
                        else "loaders.Docx2txtLoader"
 
-        with patch("extensions.documentupload.list_documents", return_value=records), \
+        with patch("extensions.documents.documentupload.list_documents", return_value=records), \
              patch(loader_patch) as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
@@ -264,7 +264,7 @@ class TestListDocumentsFallback:
         (tmp_path / "doc.pdf").write_bytes(b"%PDF fake")
         fake_doc = make_doc()
 
-        with patch("extensions.documentupload.list_documents", side_effect=RuntimeError("DB down")), \
+        with patch("extensions.documents.documentupload.list_documents", side_effect=RuntimeError("DB down")), \
              patch("loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
@@ -277,7 +277,7 @@ class TestListDocumentsFallback:
         (tmp_path / "doc.pdf").write_bytes(b"%PDF fake")
         fake_doc = make_doc()
 
-        with patch("extensions.documentupload.list_documents", side_effect=Exception("any error")), \
+        with patch("extensions.documents.documentupload.list_documents", side_effect=Exception("any error")), \
              patch("loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
