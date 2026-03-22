@@ -1,5 +1,6 @@
 import streamlit as st
 from pathlib import Path
+from extensions.pocketbase import is_authenticated
 
 st.set_page_config(page_title="PDF Detail View", layout="wide")
 
@@ -14,6 +15,11 @@ if not name:
     st.switch_page("pages/management/documents.py")
     st.stop()
 
+if not is_authenticated():
+    st.error("Authentication required.")
+    st.switch_page("pages/authentication/login.py")
+    st.stop()
+
 st.header("PDF Detail View")
 
 # Back button (clears state)
@@ -21,7 +27,11 @@ if st.button("Return To Documents"):
     clear_pdf_state_and_return()
 
 data_dir = Path(__file__).resolve().parent.parent.parent / "data"
-file_path = data_dir / name
+file_path = (data_dir / name).resolve()
+
+if data_dir.resolve() not in file_path.parents:
+    st.error("Invalid file path.")
+    st.stop()
 
 if not file_path.exists():
     st.error("File not found.")
