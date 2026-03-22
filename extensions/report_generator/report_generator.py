@@ -71,16 +71,18 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
         pdf, maintype="application", subtype="pdf", filename="report.pdf"
     )
 
-    # Send email via local SMTP server (via mailhog)
-    # server = smtplib.SMTP("mailhog", 1025)
-    # server.set_debuglevel(1)
-    # server.send_message(msg)
-    # server.quit()
-
-    server = smtplib.SMTP(
-        os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587"))
-    )
-    server.starttls()
-    server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
-    server.send_message(msg)
-    server.quit()
+    if os.getenv("APP_ENV") == "development":
+        #Send email via local SMTP server (via mailhog)
+        server = smtplib.SMTP("mailhog", 1025)
+        server.set_debuglevel(1)
+        server.send_message(msg)
+        server.quit()
+    else:
+        # Send email via real SMTP server (e.g. Gmail)
+        server = smtplib.SMTP(
+            os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587"))
+        )
+        server.starttls()
+        server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
+        server.send_message(msg)
+        server.quit()
