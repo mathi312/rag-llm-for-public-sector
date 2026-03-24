@@ -62,7 +62,7 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
     msg = EmailMessage()
     msg["Subject"] = "LLM Chat Report"
     # msg["From"] = "report@ragllm.uni-ulm.de"
-    msg["From"] = os.getenv("SMTP_USER")
+    msg["From"] = os.getenv("APP_ENV") == "production" and os.getenv("SMTP_USER") or "report@ragllm.uni-ulm.de"
     msg["To"] = to_email
     msg.set_content(
         "This is an automated email. LLM Chat Report can be found in the attachment."
