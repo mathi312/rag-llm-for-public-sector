@@ -4,12 +4,22 @@ from extensions.documents.documentupload import (
     list_documents,
     update_document,
     confirm_delete_document,
-    view_pdf_dialog
+    view_pdf_dialog,
 )
+from extensions.documents.document_management_controller import DocumentManagementController
 from extensions.example_questions.question_controller import generate_questions
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
+
+controller = DocumentManagementController(
+    streamlit_module=st,
+    generate_questions_fn=generate_questions,
+    show_questions_dialog_fn=show_questions_dialog,
+    view_pdf_dialog_fn=view_pdf_dialog,
+    update_document_fn=update_document,
+    confirm_delete_document_fn=confirm_delete_document,
+)
 
 if st.session_state.get("upload_success_msg"):
     st.toast(st.session_state["upload_success_msg"])
@@ -61,53 +71,20 @@ if docs:
 
         # generate example questions
         if cols[6].button("Generate questions", key=f"generate-{doc['id']}", use_container_width=True):
-            questions = generate_questions(
-                document_name=doc.get("original_name"),
-                provider=st.session_state.provider,
-                model_name=st.session_state.selected_model,
-            )
-            if questions:
-                show_questions_dialog(questions)
-            else:
-                st.error(f"Could not generate questions for **{doc.get('original_name')}**. Please try again later.")
+            controller.handle_generate_questions(doc)
 
         # View
         if cols[7].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
-            view_pdf_dialog(
-                document_name=doc.get("document"),
-                original_name=doc.get("original_name"),
-            )
+            controller.handle_view(doc)
 
         # Edit
         if cols[8].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
-            raw_version = doc.get("version")
-            try:
-                next_version = str(int(raw_version) + 1)
-            except (TypeError, ValueError):
-                next_version = str(raw_version or "1")
-
-            update_document(
-                record_id=doc["id"],
-                title=doc.get("title"),
-                version=next_version,
-                needed_id=doc.get("needed_id"),
-                original_name=doc.get("original_name"),
-                document_name=doc.get("document"),
-                current_version=doc.get("version"),
-            )
+            controller.handle_edit(doc)
 
         # Delete
         if cols[9].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
-            if confirm_delete_document(
-                record_id=doc["id"],
-                document_name=doc.get("document"),
-                original_name=doc.get("original_name"),
-            ):
-                st.success("Dokument gelöscht.")
-                st.rerun()
+            controller.handle_delete(doc)
 
         st.divider()
 else:
     st.info("Keine Dokumente vorhanden.")
-
-# TODO: Tests schreiben für documentupload.py Funktionen: upload_document, list_documents, delete_document, update_document
