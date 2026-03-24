@@ -64,8 +64,9 @@ def create_rag_chain(vector_store: FAISS, llm: BaseLanguageModel):
 
     qa_chain = create_stuff_documents_chain(llm, prompt_template)
     retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={"k": 6, "score_threshold": 0.3},
+        # MMR returns relevant and diverse chunks
+        search_type="mmr",
+        search_kwargs={"k": 6, "fetch_k": 24, "lambda_mult": 0.25},
     )
 
     return retriever, qa_chain

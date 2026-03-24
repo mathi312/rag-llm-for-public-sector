@@ -18,6 +18,14 @@ services:
     ports:
       - "8501:8501"
 
+  # Mailhog service for capturing outgoing emails
+  mailhog:
+   image: mailhog/mailhog
+   container_name: mailhog
+   ports:
+     - "8025:8025"
+     - "1025:1025"
+
   pocketbase:
     ports:
       - "8080:8080"
