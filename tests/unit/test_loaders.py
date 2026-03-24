@@ -237,7 +237,12 @@ class TestNeededIdMetadata:
         doc = self._load(tmp_path, records, "doc.pdf")
         assert doc.metadata["needed_id"] == ["passport"]
 
-    def test_needed_id_set_via_document_name(self, tmp_path):
+    def test_needed_id_set_via_document(self, tmp_path):
+        records = [{"original_name": None, "document": "doc.pdf", "needed_id": ["id_card"]}]
+        doc = self._load(tmp_path, records, "doc.pdf")
+        assert doc.metadata["needed_id"] == ["id_card"]
+
+    def test_needed_id_set_via_legacy_document_name(self, tmp_path):
         records = [{"original_name": None, "document_name": "doc.pdf", "needed_id": ["id_card"]}]
         doc = self._load(tmp_path, records, "doc.pdf")
         assert doc.metadata["needed_id"] == ["id_card"]
