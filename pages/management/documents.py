@@ -21,7 +21,6 @@ if "pending_questions" in st.session_state:
     
 controller = DocumentManagementController(
     streamlit_module=st,
-    generate_questions_fn=generate_questions,
     show_questions_dialog_fn=show_questions_dialog,
     view_pdf_dialog_fn=view_pdf_dialog,
     update_document_fn=update_document,
@@ -89,7 +88,8 @@ if docs:
             use_container_width=True,
             disabled=is_loading,
         ):
-            controller.handle_generate_questions(doc)
+            st.session_state.generating_for = doc_id  # set loading state
+            st.rerun()
 
         # View
         if cols[7].button(
