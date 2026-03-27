@@ -12,7 +12,7 @@ sys.modules.setdefault("pocketbase", MagicMock())
 sys.modules["pocketbase.client"] = MagicMock()
 
 pb_patch = patch(
-    "extensions.example_questions.question_repository.PocketBase",
+    "extensions.predefined_questions.question_repository.PocketBase",
     return_value=mock_pb_instance,
 )
 env_patch = patch.dict(

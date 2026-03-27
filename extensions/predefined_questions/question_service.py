@@ -3,17 +3,17 @@ from pathlib import Path
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-from extensions.example_questions.question_repository import QuestionRepository
+from extensions.predefined_questions.question_repository import QuestionRepository
 from extensions.documentupload import extract_text_from_file
-from extensions.example_questions.question import Question
-from extensions.example_questions.exceptions import (
+from extensions.predefined_questions.question import Question
+from extensions.predefined_questions.exceptions import (
     QuestionFetchError,
     QuestionCreateError,
     QuestionUpdateError,
 )
 from models import get_llm
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 
 class QuestionService:

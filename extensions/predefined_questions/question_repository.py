@@ -3,8 +3,8 @@ import random
 
 from pocketbase import PocketBase
 
-from extensions.example_questions.question import Question
-from extensions.example_questions.exceptions import (
+from extensions.predefined_questions.question import Question
+from extensions.predefined_questions.exceptions import (
     QuestionFetchError,
     QuestionCreateError,
     QuestionUpdateError,

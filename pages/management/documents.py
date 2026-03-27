@@ -6,10 +6,17 @@ from extensions.documentupload import (
     confirm_delete_document,
     view_pdf_dialog
 )
-from extensions.example_questions.question_controller import generate_questions
+from extensions.predefined_questions.question_controller import generate_questions
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
+
+# Initialize loading state
+if "generating_for" not in st.session_state:
+    st.session_state.generating_for = None
+if "pending_questions" in st.session_state:
+    questions_to_show = st.session_state.pop("pending_questions")
+    show_questions_dialog(questions_to_show)
 
 if st.session_state.get("upload_success_msg"):
     st.toast(st.session_state["upload_success_msg"])
@@ -17,7 +24,10 @@ if st.session_state.get("upload_success_msg"):
 
 # upload document dialog
 st.header("3. Document Management")
-if st.button("Upload New Document"):
+
+is_loading = st.session_state.generating_for is not None
+
+if st.button("Upload New Document", disabled=is_loading):
     upload_document()
 
 # Show existing documents
@@ -41,6 +51,9 @@ if docs:
 
     for doc in docs:
         cols = st.columns(columns, gap="small")
+        doc_id = doc["id"]
+        is_this_loading = st.session_state.generating_for == doc_id
+
         # Title
         cols[0].markdown(f"**{doc.get('title','')}**")
 
@@ -48,7 +61,7 @@ if docs:
         cols[1].markdown(f"v{doc.get('version','')}")
 
         # Needed IDs
-        cols[2].markdown(", ".join(doc.get("needed_id", [])) or "\-")
+        cols[2].markdown(", ".join(doc.get("needed_id", [])) or "-")
 
         # Document
         cols[3].markdown(f"{doc.get('original_name','')}")
@@ -59,27 +72,35 @@ if docs:
         # Updated
         cols[5].markdown(f"{doc.get('updated','')}")
 
-        # generate example questions
-        if cols[6].button("Generate questions", key=f"generate-{doc['id']}", use_container_width=True):
-            questions = generate_questions(
-                document_name=doc.get("original_name"),
-                provider=st.session_state.provider,
-                model_name=st.session_state.selected_model,
-            )
-            if questions:
-                show_questions_dialog(questions)
-            else:
-                st.error(f"Could not generate questions for **{doc.get('original_name')}**. Please try again later.")
+        # Generate questions — shows spinner label while loading
+        if cols[6].button(
+            "Generate questions",
+            key=f"generate-{doc_id}",
+            use_container_width=True,
+            disabled=is_loading,
+        ):
+            st.session_state.generating_for = doc_id
+            st.rerun()
 
         # View
-        if cols[7].button("👁️ View", key=f"view-{doc['id']}", use_container_width=True):
+        if cols[7].button(
+            "👁️ View", 
+            key=f"view-{doc['id']}", 
+            use_container_width=True, 
+            disabled=is_loading
+        ):
             view_pdf_dialog(
                 document_name=doc.get("document"),
                 original_name=doc.get("original_name"),
             )
 
         # Edit
-        if cols[8].button("✏️ Edit", key=f"edit-{doc['id']}", use_container_width=True):
+        if cols[8].button(
+            "✏️ Edit",
+            key=f"edit-{doc['id']}",
+            use_container_width=True,
+            disabled=is_loading,
+        ):
             update_document(
                 record_id=doc["id"],
                 title=doc.get("title"),
@@ -91,7 +112,12 @@ if docs:
             )
 
         # Delete
-        if cols[9].button("🗑️ Delete", key=f"del-{doc['id']}", use_container_width=True):
+        if cols[9].button(
+            "🗑️ Delete",
+            key=f"del-{doc['id']}",
+            use_container_width=True,
+            disabled=is_loading
+        ):
             if confirm_delete_document(
                 record_id=doc["id"],
                 document_name=doc.get("document"),
@@ -101,7 +127,28 @@ if docs:
                 st.rerun()
 
         st.divider()
+
+    # --- Run generation after re-render (buttons are now disabled) ---
+    if st.session_state.generating_for is not None:
+        generating_doc = next((d for d in docs if d["id"] == st.session_state.generating_for), None)
+        if generating_doc:
+            with st.spinner(
+                f"Generating questions for **{generating_doc.get('original_name')}**..."
+            ):
+                questions = generate_questions(
+                    document_name=generating_doc.get("original_name"),
+                    provider=st.session_state.provider or "Local (Ollama)",
+                    model_name=st.session_state.selected_model or "llama3.2",
+                )
+            st.session_state.generating_for = None  # clear loading state
+            if questions:
+                st.session_state.pending_questions = questions
+            else:
+                st.error(
+                    f"Could not generate questions for **{generating_doc.get('original_name')}**." +
+                    "Please try again later."
+                )
+            st.rerun()
+
 else:
     st.info("Keine Dokumente vorhanden.")
-
-# TODO: Tests schreiben für documentupload.py Funktionen: upload_document, list_documents, delete_document, update_document

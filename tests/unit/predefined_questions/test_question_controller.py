@@ -1,14 +1,14 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from extensions.example_questions.question import Question
-from extensions.example_questions.question_controller import (
+from extensions.predefined_questions.question import Question
+from extensions.predefined_questions.question_controller import (
     get_questions,
     generate_questions,
     save_questions,
     update_times_asked_of_question
 )
-from extensions.example_questions.exceptions import (
+from extensions.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionFetchError,
     QuestionUpdateError
@@ -16,13 +16,13 @@ from extensions.example_questions.exceptions import (
 
 @pytest.fixture
 def mock_service():
-    with patch("extensions.example_questions.question_controller.service") as mock:
+    with patch("extensions.predefined_questions.question_controller.service") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_logger():
-    with patch("extensions.example_questions.question_controller.logger") as mock:
+    with patch("extensions.predefined_questions.question_controller.logger") as mock:
         yield mock
 
 

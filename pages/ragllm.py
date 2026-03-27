@@ -23,7 +23,7 @@ from extensions.pocketbase import *
 from extensions.user import User
 from extensions.documentupload import upload_document
 from pages.components.user_menu import user_menu
-from extensions.example_questions.question_controller import get_questions, update_times_asked_of_question
+from extensions.predefined_questions.question_controller import get_questions, update_times_asked_of_question
 
 
 if "example_questions" not in st.session_state:

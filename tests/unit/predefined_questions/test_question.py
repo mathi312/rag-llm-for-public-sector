@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from types import SimpleNamespace
 
-from extensions.example_questions.question import Question
+from extensions.predefined_questions.question import Question
 
 
 def test_creates_instance_with_correct_fields():

@@ -3,9 +3,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-from extensions.example_questions.question import Question
-from extensions.example_questions.question_service import QuestionService
-from extensions.example_questions.exceptions import (
+from extensions.predefined_questions.question import Question
+from extensions.predefined_questions.question_service import QuestionService
+from extensions.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionFetchError,
     QuestionUpdateError
@@ -44,16 +44,16 @@ class TestGenerateExampleQuestions:
         with pytest.raises(ValueError):
             service.generate_example_questions(None, None, None)
 
-    @patch("extensions.example_questions.question_service.DATA_DIR", new=Path("/nonexistent_dir"))
+    @patch("extensions.predefined_questions.question_service.DATA_DIR", new=Path("/nonexistent_dir"))
     def test_raises_file_not_found_if_document_missing(self, service):
         with pytest.raises(FileNotFoundError, match="document not found"):
             service.generate_example_questions("nonexistent.pdf", "Local (Ollama)", "llama3.2")
 
-    @patch("extensions.example_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
-    @patch("extensions.example_questions.question_service.LLMChain")
-    @patch("extensions.example_questions.question_service.get_llm")
-    @patch("extensions.example_questions.question_service.extract_text_from_file", return_value="document text")
-    @patch("extensions.example_questions.question_service.Path.exists", return_value=True)
+    @patch("extensions.predefined_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
+    @patch("extensions.predefined_questions.question_service.LLMChain")
+    @patch("extensions.predefined_questions.question_service.get_llm")
+    @patch("extensions.predefined_questions.question_service.extract_text_from_file", return_value="document text")
+    @patch("extensions.predefined_questions.question_service.Path.exists", return_value=True)
     def test_raises_runtime_error_if_llm_invocation_fails(self, mock_exists, mock_extract, mock_get_llm, mock_llm_chain, service):
         mock_chain = MagicMock()
         mock_chain.run.side_effect = RuntimeError("API error")
@@ -62,11 +62,11 @@ class TestGenerateExampleQuestions:
         with pytest.raises(RuntimeError, match="LLM invocation failed"):
             service.generate_example_questions("doc.pdf", "Local (Ollama)", "llama3.2")
 
-    @patch("extensions.example_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
-    @patch("extensions.example_questions.question_service.LLMChain")
-    @patch("extensions.example_questions.question_service.get_llm")
-    @patch("extensions.example_questions.question_service.extract_text_from_file", return_value="text")
-    @patch("extensions.example_questions.question_service.Path.exists", return_value=True)
+    @patch("extensions.predefined_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
+    @patch("extensions.predefined_questions.question_service.LLMChain")
+    @patch("extensions.predefined_questions.question_service.get_llm")
+    @patch("extensions.predefined_questions.question_service.extract_text_from_file", return_value="text")
+    @patch("extensions.predefined_questions.question_service.Path.exists", return_value=True)
     def test_returns_list_of_questions_from_llm_output(self, mock_exists, mock_extract, mock_get_llm, mock_llm_chain, service):
         mock_chain = MagicMock()
         mock_chain.run.return_value = "Q1?\nQ2?\nQ3?\nQ4?\nQ5?\n"
@@ -77,11 +77,11 @@ class TestGenerateExampleQuestions:
         assert result == ["Q1?", "Q2?", "Q3?", "Q4?", "Q5?"]
 
 
-    @patch("extensions.example_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
-    @patch("extensions.example_questions.question_service.LLMChain")
-    @patch("extensions.example_questions.question_service.get_llm")
-    @patch("extensions.example_questions.question_service.extract_text_from_file", return_value="text")
-    @patch("extensions.example_questions.question_service.Path.exists", return_value=True)
+    @patch("extensions.predefined_questions.question_service.DATA_DIR", new=Path("/fake_dir"))
+    @patch("extensions.predefined_questions.question_service.LLMChain")
+    @patch("extensions.predefined_questions.question_service.get_llm")
+    @patch("extensions.predefined_questions.question_service.extract_text_from_file", return_value="text")
+    @patch("extensions.predefined_questions.question_service.Path.exists", return_value=True)
     def test_passes_provider_and_model_to_get_llm(self, mock_exists, mock_extract, mock_get_llm, mock_llm_chain, service):
         mock_chain = MagicMock()
         mock_chain.run.return_value = "Q1?"
