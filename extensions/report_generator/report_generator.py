@@ -62,7 +62,7 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
     msg = EmailMessage()
     msg["Subject"] = "LLM Chat Report"
     # msg["From"] = "report@ragllm.uni-ulm.de"
-    msg["From"] = os.getenv("SMTP_USER")
+    msg["From"] = os.getenv("APP_ENV") == "production" and os.getenv("SMTP_USER") or "report@ragllm.uni-ulm.de"
     msg["To"] = to_email
     msg.set_content(
         "This is an automated email. LLM Chat Report can be found in the attachment."
@@ -71,16 +71,18 @@ def send_report_via_email(report: Report, to_email: str, user: User | None = Non
         pdf, maintype="application", subtype="pdf", filename="report.pdf"
     )
 
-    # Send email via local SMTP server (via mailhog)
-    # server = smtplib.SMTP("mailhog", 1025)
-    # server.set_debuglevel(1)
-    # server.send_message(msg)
-    # server.quit()
-
-    server = smtplib.SMTP(
-        os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587"))
-    )
-    server.starttls()
-    server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
-    server.send_message(msg)
-    server.quit()
+    if os.getenv("APP_ENV") == "development":
+        #Send email via local SMTP server (via mailhog)
+        server = smtplib.SMTP("mailhog", 1025)
+        server.set_debuglevel(1)
+        server.send_message(msg)
+        server.quit()
+    else:
+        # Send email via real SMTP server (e.g. Gmail)
+        server = smtplib.SMTP(
+            os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587"))
+        )
+        server.starttls()
+        server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
+        server.send_message(msg)
+        server.quit()

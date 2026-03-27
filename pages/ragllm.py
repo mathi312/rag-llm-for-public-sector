@@ -19,9 +19,7 @@ from extensions.report_generator.report_generator import print_report, send_repo
 from extensions.report_generator.report import Report
 from extensions.report_generator.excpetions import *
 from extensions.idprovider import *
-from extensions.pocketbase import *
-from extensions.user import User
-from extensions.documentupload import upload_document
+from extensions.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
 from pages.components.user_menu import user_menu
 from extensions.predefined_questions.question_controller import get_questions, update_times_asked_of_question
 
@@ -267,7 +265,8 @@ with st.sidebar:
                     handle_id_upload(id_image)
 
                     msg = st.empty()
-                    msg.success(f"{st.session_state.get("id_document").get("type")} document uploaded successfully!")
+                    id_type = st.session_state.get("id_document", {}).get("type", "ID")
+                    msg.success(f"{id_type} document uploaded successfully!")
                     time.sleep(2)
                     msg.empty()
 
@@ -391,7 +390,7 @@ if process_btn:
             splits = split_documents(all_docs)
 
             status_msg.info("Building vector index...")
-            # Batch size 5 is safe for local; OpenAI can handle larger but 5 is fine for both
+            # Batch size 5 is safe for local. OpenAI can handle larger but 5 is fine for both
             st.session_state.vector_store = build_index_from_documents(
                 splits, embeddings, batch_size=5
             )

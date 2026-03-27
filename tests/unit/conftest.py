@@ -17,7 +17,7 @@ sys.modules["pocketbase.client"] = MagicMock()
 
 pb_patch = patch(
 
-    "extensions.documentupload.PocketBase",
+    "extensions.documents.documentupload.PocketBase",
     return_value=mock_pb_instance,
 
 )

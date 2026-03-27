@@ -1,12 +1,13 @@
 import streamlit as st
-from extensions.documentupload import (
+from extensions.documents.documentupload import (
     upload_document,
     list_documents,
     update_document,
     confirm_delete_document,
-    view_pdf_dialog
+    view_pdf_dialog,
 )
 from extensions.predefined_questions.question_controller import generate_questions
+from extensions.documents.document_management_controller import DocumentManagementController
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
@@ -17,6 +18,14 @@ if "generating_for" not in st.session_state:
 if "pending_questions" in st.session_state:
     questions_to_show = st.session_state.pop("pending_questions")
     show_questions_dialog(questions_to_show)
+    
+controller = DocumentManagementController(
+    streamlit_module=st,
+    show_questions_dialog_fn=show_questions_dialog,
+    view_pdf_dialog_fn=view_pdf_dialog,
+    update_document_fn=update_document,
+    confirm_delete_document_fn=confirm_delete_document,
+)
 
 if st.session_state.get("upload_success_msg"):
     st.toast(st.session_state["upload_success_msg"])
@@ -79,7 +88,7 @@ if docs:
             use_container_width=True,
             disabled=is_loading,
         ):
-            st.session_state.generating_for = doc_id
+            st.session_state.generating_for = doc_id  # set loading state
             st.rerun()
 
         # View
@@ -89,10 +98,7 @@ if docs:
             use_container_width=True, 
             disabled=is_loading
         ):
-            view_pdf_dialog(
-                document_name=doc.get("document"),
-                original_name=doc.get("original_name"),
-            )
+            controller.handle_view(doc)
 
         # Edit
         if cols[8].button(
@@ -101,15 +107,7 @@ if docs:
             use_container_width=True,
             disabled=is_loading,
         ):
-            update_document(
-                record_id=doc["id"],
-                title=doc.get("title"),
-                version=doc.get("version") + 1,
-                needed_id=doc.get("needed_id"),
-                original_name=doc.get("original_name"),
-                document_name=doc.get("document"),
-                current_version=doc.get("version"),
-            )
+            controller.handle_edit(doc)
 
         # Delete
         if cols[9].button(
@@ -118,13 +116,7 @@ if docs:
             use_container_width=True,
             disabled=is_loading
         ):
-            if confirm_delete_document(
-                record_id=doc["id"],
-                document_name=doc.get("document"),
-                original_name=doc.get("original_name"),
-            ):
-                st.success("Dokument gelöscht.")
-                st.rerun()
+            controller.handle_delete(doc)
 
         st.divider()
 

@@ -62,18 +62,34 @@ Open your terminal (PowerShell, Command Prompt, or Terminal) and run:
 4.  (Optional) Copy any PDF or DOCX files you want to auto-index into this `data/` folder.
 
 ### Step 3: Build the Application
-Rename docker-compose.dev.yml to docker-compose.yml
+This project uses a base Compose file plus an environment-specific override:
 
-Run the Docker Compose build command. This process creates the Python environment inside a container, installs `python 3.12`, and downloads all libraries defined in `requirements.txt`.
+    docker-compose.yml          # Base services and shared settings
+    docker-compose.dev.yml      # Development overrides
+    docker-compose.prod.yml     # Production-like overrides
 
-    docker compose build --no-cache
+Run the Docker Compose build command with the files for your target environment.
+
+Development build:
+
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache
+
+Production build:
+
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
 
 *   *Note: This may take 2-5 minutes depending on your internet speed.*
 
 ### Step 4: Start the Services
 Launch the application stack in detached mode (background):
 
-    docker compose up -d
+Development mode:
+
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+Production mode:
+
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 *   This starts two containers:
     1.  **rag-app:** The Streamlit frontend (Port 8501).
@@ -126,9 +142,9 @@ Open your web browser and navigate to:
 *   **Cause:** The Docker container has an outdated library version.
 *   **Fix:** Force a full rebuild:
 
-    docker compose down
-    docker compose build --no-cache
-    docker compose up -d
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 ### 🔴 "Failed to load index"
 *   **Cause:** You are trying to use an index built with OpenAI while currently using Ollama (or vice versa).
@@ -147,6 +163,7 @@ Open your web browser and navigate to:
     ├── models.py           # LLM Factory (Ollama/OpenAI switch)
     ├── requirements.txt    # Python Dependencies
     ├── Dockerfile          # App Container Definition
+    ├── docker-compose.yml      # Base service orchestration
     ├── docker-compose.dev.yml  # Service Orchestration
     ├── docker-compose.prod.yml  # Service Orchestration
     ├── extensions/         # Folder for code extension (Feature Implementation)
@@ -159,19 +176,31 @@ Open your web browser and navigate to:
 
 Access Pocketbase under http://127.0.0.1:8080/_/
 
-> **_NOTE_**: Use these credentials to log into the pocketbase management interface
->
-> **username:** admin@rag-llm.de
->
-> **password:** m1UU!82ax7e
->
-> These credentials might not exist in your environment, in that case:
->
 > Use this command to create a new super user account
 >
 > `docker exec -it pocketbase /pb/pocketbase superuser create EMAIL_ADRESS PASSWORD`
 >
 > Docker Compose (pocketbase service) must be running in the background for this to work.
+
+### 7.1 Persist collection schema and API rules with migrations
+
+To avoid manually recreating collections/rules after a fresh pull or deployment,
+PocketBase migrations are now versioned in `pocketbase/pb_migrations`.
+
+After changing collections/rules in the PocketBase Dashboard, generate a snapshot migration:
+
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml exec pocketbase /pb/pocketbase migrate collections
+
+This writes a new migration file into `pocketbase/pb_migrations/`. Commit that file to git.
+
+Recommended team workflow:
+
+1. Edit schema/rules in Dashboard.
+2. Run `migrate collections` command above.
+3. Commit the generated file in `pocketbase/pb_migrations/`.
+4. Rebuild and restart containers.
+
+On a fresh environment (empty `pocketbase-data`), PocketBase applies unapplied migrations automatically on startup.
 
 ## 8. MailHog
 
@@ -183,13 +212,13 @@ To run tests, first create a testfile in the **tests/** folder. The naming conve
 
 Type in this command to run the tests:
 
-    docker compose --profile unit-test run --rm rag-app-test
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile unit-test run --rm rag-app-test
 
 Enter these commands to run the end-to-end integration tests:
 
-    docker compose up -d
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
-    docker compose --profile integration-test run --rm rag-app-integration-test
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile integration-test run --rm rag-app-integration-test
 
 ### 9.1. Code Coverage
 
@@ -197,11 +226,11 @@ For this the tool [Coverage.py](https://coverage.readthedocs.io/) is used.
 
 To run test coverage and dump file, use these commands:
 
-    docker compose run --rm --entrypoint "" rag-app-test python -m coverage run -m pytest tests/unit
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --entrypoint "" rag-app-test python -m coverage run -m pytest tests/unit
     
-    docker compose run --rm --entrypoint "" rag-app-test python -m coverage report -m
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --entrypoint "" rag-app-test python -m coverage report -m
 
-    docker compose run --rm --entrypoint "" rag-app-test python -m coverage html
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --entrypoint "" rag-app-test python -m coverage html
 
 A folder named `coverage_html_report` will be created. If you open the `index.html` in a browser, you will see all the coverage based information.
 

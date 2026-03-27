@@ -44,7 +44,7 @@ FIELD_PATTERNS: Dict[str, Dict[str, str]] = {
         "passport_date_of_expiry": "",
         "passport_authority": "",
     },
-    "Residence permit": {
+    "Residence Permit": {
         "residence_permit_number": "",
         "residence_permit_last_name": "",
         "residence_permit_first_name": "",
@@ -56,42 +56,75 @@ FIELD_PATTERNS: Dict[str, Dict[str, str]] = {
     },
 }
 
+
+def _safe_line(lines: List[str], index: int) -> str:
+    if 0 <= index < len(lines):
+        return lines[index].strip()
+    return ""
+
+
+def _compose_date(lines: List[str], indexes: tuple[int, int, int]) -> str:
+    parts = [_safe_line(lines, idx).replace(" ", "") for idx in indexes]
+    if all(parts):
+        return ".".join(parts)
+    return ""
+
+
+def _compose_date_from_two_parts(lines: List[str], first: int, second: int) -> str:
+    part_one = _safe_line(lines, first).replace(" ", "")
+    part_two = _safe_line(lines, second).replace(" ", "")
+    if not part_one or not part_two:
+        return ""
+    return f"{part_one}.{part_two.lstrip('.')}"
+
+
+def _ensure_required_lines(id_type: IdType, lines: List[str]) -> None:
+    required_indexes = {
+        IdType.ID_CARD: [26],
+        IdType.PASSPORT: [58],
+        IdType.RESIDENCE_PERMIT: [22],
+    }
+    highest_required = max(required_indexes.get(id_type, [0]))
+    if len(lines) <= highest_required:
+        raise IndexError("Not enough OCR lines to map fields")
+
 def map_id_fields(id_type: IdType, lines: List[str]) -> Dict[str, str]:
     """Maps OCR lines to ID fields based on the ID type."""
-    patterns = FIELD_PATTERNS.get(id_type, {})
+    _ensure_required_lines(id_type, lines)
+    patterns = FIELD_PATTERNS.get(id_type.value, {})
     mapped: Dict[str, str] = {k: "" for k in patterns.keys()}
 
     if id_type == IdType.ID_CARD:
-        mapped["id_card_number"] = mapped.get("id_card_number", "") or lines[1].strip().replace(" ", "")
-        mapped["id_card_name"] = mapped.get("id_card_name", "") or lines[9].strip()[3:]
-        mapped["id_card_birth_name"] = mapped.get("id_card_birth_name", "") or lines[10].strip()[3:]
-        mapped["id_card_first_name"] = mapped.get("id_card_first_name", "") or lines[12].strip()
-        mapped["id_card_date_of_birth"] = mapped.get("id_card_date_of_birth", "") or lines[17].strip() + "." + lines[18].strip() + "." + lines[19].strip()
-        mapped["id_card_place_of_birth"] = mapped.get("id_card_place_of_birth", "") or lines[22].strip()
-        mapped["id_card_nationality"] = mapped.get("id_card_nationality", "") or lines[20].strip()
-        mapped["id_card_date_of_expiry"] = mapped.get("id_card_date_of_expiry", "") or lines[25].strip() + "." + lines[26].strip().replace(" ", "")
+        mapped["id_card_number"] = mapped.get("id_card_number", "") or _safe_line(lines, 1).replace(" ", "")
+        mapped["id_card_name"] = mapped.get("id_card_name", "") or _safe_line(lines, 9)[3:]
+        mapped["id_card_birth_name"] = mapped.get("id_card_birth_name", "") or _safe_line(lines, 10)[3:]
+        mapped["id_card_first_name"] = mapped.get("id_card_first_name", "") or _safe_line(lines, 12)
+        mapped["id_card_date_of_birth"] = mapped.get("id_card_date_of_birth", "") or _compose_date(lines, (17, 18, 19))
+        mapped["id_card_place_of_birth"] = mapped.get("id_card_place_of_birth", "") or _safe_line(lines, 22)
+        mapped["id_card_nationality"] = mapped.get("id_card_nationality", "") or _safe_line(lines, 20)
+        mapped["id_card_date_of_expiry"] = mapped.get("id_card_date_of_expiry", "") or _compose_date_from_two_parts(lines, 25, 26)
 
     if id_type == IdType.PASSPORT:
-        mapped["passport_number"] = mapped.get("passport_number", "") or lines[14].upper().strip().replace(" ", "").replace("O", "0")
-        mapped["passport_last_name"] = mapped.get("passport_last_name", "") or lines[21].strip()
-        mapped["passport_birth_name"] = mapped.get("passport_birth_name", "") or lines[22].strip()
-        mapped["passport_first_name"] = mapped.get("passport_first_name", "") or lines[26].strip()
-        mapped["passport_date_of_birth"] = mapped.get("passport_date_of_birth", "") or lines[36].strip()
-        mapped["passport_place_of_birth"] = mapped.get("passport_place_of_birth", "") or lines[41].strip()
-        mapped["passport_nationality"] = mapped.get("passport_nationality", "") or lines[37].strip()
-        mapped["passport_date_of_issue"] = mapped.get("passport_date_of_issue", "") or lines[52].strip()
-        mapped["passport_date_of_expiry"] = mapped.get("passport_date_of_expiry", "") or lines[53].strip()
-        mapped["passport_authority"] = mapped.get("passport_authority", "") or lines[58].strip()
+        mapped["passport_number"] = mapped.get("passport_number", "") or _safe_line(lines, 14).upper().replace(" ", "").replace("O", "0")
+        mapped["passport_last_name"] = mapped.get("passport_last_name", "") or _safe_line(lines, 21)
+        mapped["passport_birth_name"] = mapped.get("passport_birth_name", "") or _safe_line(lines, 22)
+        mapped["passport_first_name"] = mapped.get("passport_first_name", "") or _safe_line(lines, 26)
+        mapped["passport_date_of_birth"] = mapped.get("passport_date_of_birth", "") or _safe_line(lines, 36)
+        mapped["passport_place_of_birth"] = mapped.get("passport_place_of_birth", "") or _safe_line(lines, 41)
+        mapped["passport_nationality"] = mapped.get("passport_nationality", "") or _safe_line(lines, 37)
+        mapped["passport_date_of_issue"] = mapped.get("passport_date_of_issue", "") or _safe_line(lines, 52)
+        mapped["passport_date_of_expiry"] = mapped.get("passport_date_of_expiry", "") or _safe_line(lines, 53)
+        mapped["passport_authority"] = mapped.get("passport_authority", "") or _safe_line(lines, 58)
 
     if id_type == IdType.RESIDENCE_PERMIT:
-        mapped["residence_permit_number"] = mapped.get("residence_permit_number", "") or lines[1].strip().replace(" ", "")
-        mapped["residence_permit_last_name"] = mapped.get("residence_permit_name", "") or lines[4].strip()
-        mapped["residence_permit_first_name"] = mapped.get("residence_permit_birth_name", "") or lines[5].strip()
-        mapped["residence_permit_date_of_birth"] = mapped.get("residence_permit_date_of_birth", "") or lines[14].strip() + "." + lines[15].strip() + "." + lines[16].strip()
-        mapped["residence_permit_nationality"] = mapped.get("residence_permit_nationality", "") or lines[13].strip()
-        mapped["residence_permit_sex"] = mapped.get("residence_permit_sex", "") or lines[12].strip()
-        mapped["residence_permit_type_of_permit"] = mapped.get("residence_permit_type_of_permit", "") or lines[19].strip()
-        mapped["residence_permit_date_of_expiry"] = mapped.get("residence_permit_date_of_expiry", "") or lines[20].strip() + "." + lines[21].strip() + "." + lines[22].strip()
+        mapped["residence_permit_number"] = mapped.get("residence_permit_number", "") or _safe_line(lines, 1).replace(" ", "")
+        mapped["residence_permit_last_name"] = mapped.get("residence_permit_last_name", "") or _safe_line(lines, 4)
+        mapped["residence_permit_first_name"] = mapped.get("residence_permit_first_name", "") or _safe_line(lines, 5)
+        mapped["residence_permit_date_of_birth"] = mapped.get("residence_permit_date_of_birth", "") or _compose_date(lines, (14, 15, 16))
+        mapped["residence_permit_nationality"] = mapped.get("residence_permit_nationality", "") or _safe_line(lines, 13)
+        mapped["residence_permit_sex"] = mapped.get("residence_permit_sex", "") or _safe_line(lines, 12)
+        mapped["residence_permit_type_of_permit"] = mapped.get("residence_permit_type_of_permit", "") or _safe_line(lines, 19)
+        mapped["residence_permit_date_of_expiry"] = mapped.get("residence_permit_date_of_expiry", "") or _compose_date(lines, (20, 21, 22))
 
     return mapped
     

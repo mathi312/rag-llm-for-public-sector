@@ -17,7 +17,6 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
 )
 from langchain_core.documents import Document
 
@@ -94,24 +93,27 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         List[Document]: List of loaded documents from the directory.
     """
     documents: List[Document] = []
+    needed_id_map: dict[str, list[str]] = {}
 
     if not data_dir.exists():
         return documents
 
-        # Mapping: Dateiname -> benötigte Ausweisarten
-    needed_id_map: dict[str, list[str]] = {}
+    # Mapping: filename -> required IDs
     try:
-        from extensions.documentupload import list_documents
+        from extensions.documents.documentupload import list_documents
 
         for rec in list_documents():
             ids = rec.get("needed_id") or []
             original_name = rec.get("original_name")
-            document_name = rec.get("document_name")
+            document_name = rec.get("document")
+            legacy_document_name = rec.get("document_name")
 
             if original_name:
                 needed_id_map[original_name] = ids
             if document_name:
                 needed_id_map[document_name] = ids
+            elif legacy_document_name:
+                needed_id_map[legacy_document_name] = ids
     except Exception:
         needed_id_map = {}
 
@@ -131,7 +133,8 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
             continue
-
+        
+        # Load the document and attach metadata about source and needed IDs.
         docs = loader.load()
 
         for doc in docs:
