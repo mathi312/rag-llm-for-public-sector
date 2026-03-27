@@ -29,21 +29,21 @@ class PocketBaseAuthController:
         # Try to get auth from session_state first
         auth_data = self._get_session_auth()
         
-        # If not in session_state, try to restore from auth_store
-        if auth_data is None and self._client is not None:
-            auth_store = getattr(self._client, "auth_store", None)
-            if auth_store and hasattr(auth_store, "token") and auth_store.token:
-                # auth_store has token and model, restore them to session
-                try:
-                    auth_data = {
-                        "token": auth_store.token,
-                        "model": auth_store.model
-                    }
-                    self._st.session_state["pb_auth"] = auth_data
-                except Exception as e:
-                    self._logger.log_warning(
-                        PBLog.RESTORE_AUTH_FROM_STORE_FAILED.value.format(error=e)
-                    )
+        # # If not in session_state, try to restore from auth_store
+        # if auth_data is None and self._client is not None:
+        #     auth_store = getattr(self._client, "auth_store", None)
+        #     if auth_store and hasattr(auth_store, "token") and auth_store.token:
+        #         # auth_store has token and model, restore them to session
+        #         try:
+        #             auth_data = {
+        #                 "token": auth_store.token,
+        #                 "model": auth_store.model
+        #             }
+        #             self._st.session_state["pb_auth"] = auth_data
+        #         except Exception as e:
+        #             self._logger.log_warning(
+        #                 PBLog.RESTORE_AUTH_FROM_STORE_FAILED.value.format(error=e)
+        #             )
         
         # Now proceed with restoring the user
         if auth_data is None:
