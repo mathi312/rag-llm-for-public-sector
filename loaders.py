@@ -17,7 +17,6 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
 )
 from langchain_core.documents import Document
 
@@ -134,7 +133,8 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
             continue
-
+        
+        # Load the document and attach metadata about source and needed IDs.
         docs = loader.load()
 
         for doc in docs:

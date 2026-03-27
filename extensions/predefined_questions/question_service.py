@@ -1,4 +1,5 @@
 from pathlib import Path
+from config import BASE_DIR
 
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
