@@ -1,4 +1,5 @@
 from pathlib import Path
+from config import BASE_DIR
 
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
@@ -13,7 +14,7 @@ from extensions.example_questions.exceptions import (
 )
 from models import get_llm
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = BASE_DIR/ "data"
 
 
 class QuestionService:

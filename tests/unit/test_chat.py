@@ -1,6 +1,12 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from chat import needs_id_prompt, create_rag_chain, answer_question, sources_require_id
+from chat import (
+    NO_CONTEXT_ANSWER,
+    needs_id_prompt,
+    create_rag_chain,
+    answer_question,
+    sources_require_id,
+)
 
 
 @patch("chat.create_stuff_documents_chain")
@@ -32,6 +38,7 @@ class TestAnswerQuestion:
     def mock_rag_chain(self):
         """This method creates a mock for the rag chain"""
         retriever = MagicMock()
+        retriever.vectorstore = None
         retriever.invoke.return_value = ["Source 1", "Source 2"]
         chain = MagicMock()
         chain.invoke.return_value = {
@@ -80,6 +87,48 @@ class TestAnswerQuestion:
         answer_question(mock_rag_chain, question, report=mock_report)
         
         mock_report.add_entry.assert_called_once_with(question, "Dies ist die Antwort.")
+
+    def test_returns_no_context_answer_when_scores_too_low(self):
+        retriever = MagicMock()
+        retriever.vectorstore = MagicMock()
+
+        low_doc = MagicMock()
+        low_doc.metadata = {"source": "docA"}
+        retriever.vectorstore.similarity_search_with_relevance_scores.return_value = [(low_doc, 0.01)]
+
+        chain = MagicMock()
+
+        answer, sources = answer_question((retriever, chain), "Unbekannte Frage")
+
+        assert answer == NO_CONTEXT_ANSWER
+        assert sources == []
+        chain.invoke.assert_not_called()
+
+    def test_keeps_docs_from_multiple_sources_after_gate(self):
+        retriever = MagicMock()
+        retriever.vectorstore = MagicMock()
+
+        doc_a = MagicMock()
+        doc_a.metadata = {"source": "A", "page": 1}
+        doc_a.page_content = "A1"
+
+        doc_b = MagicMock()
+        doc_b.metadata = {"source": "B", "page": 1}
+        doc_b.page_content = "B1"
+
+        retriever.vectorstore.similarity_search_with_relevance_scores.return_value = [
+            (doc_a, 0.90),
+            (doc_b, 0.70),
+        ]
+
+        chain = MagicMock()
+        chain.invoke.return_value = {"answer": "Kombinierte Antwort."}
+
+        answer, sources = answer_question((retriever, chain), "Frage")
+
+        assert answer == "Kombinierte Antwort."
+        assert doc_a in sources and doc_b in sources
+        chain.invoke.assert_called_once_with({"input": "Frage", "context": sources})
 
 
 class TestSourcesRequireId:

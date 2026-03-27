@@ -20,7 +20,7 @@ def show_questions_dialog(generated_questions: List[str]):
         st.session_state.questions,
         num_rows="dynamic",
         use_container_width=True,
-        key="questions_editor"
+        key="questions_editor",
     )
 
     st.divider()

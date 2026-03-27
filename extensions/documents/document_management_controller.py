@@ -33,6 +33,9 @@ class DocumentManagementController:
             provider=self._st.session_state.provider,
             model_name=self._st.session_state.selected_model,
         )
+
+        print(questions)
+
         if questions:
             self._show_questions_dialog(questions)
             return
