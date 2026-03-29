@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 from .pocketbase_messages import PBError, PBInfo, PBLabel, PBLog
-from .pocketbase_browser_session import (
-    load_auth_from_cookies,
-    mark_browser_auth_for_clear,
-)
 
 
 class PocketBaseAuthController:
     """Controller for auth-related use cases and UI-facing status handling."""
 
-    def __init__(self, service, streamlit_module, user_cls, logger, client=None) -> None:
+    def __init__(
+        self,
+        service,
+        streamlit_module,
+        user_cls,
+        logger,
+        browser_session,
+        client=None,
+    ) -> None:
         self._service = service
         self._st = streamlit_module
         self._user_cls = user_cls
         self._logger = logger
+        self._browser_session = browser_session
         self._client = client
 
     def _get_session_auth(self) -> dict | None:
@@ -67,7 +72,7 @@ class PocketBaseAuthController:
 
         # After a browser reload, rehydrate the Streamlit session from the cookie.
         if auth_data is None:
-            auth_data = load_auth_from_cookies()
+            auth_data = self._browser_session.load_auth()
             if auth_data is not None:
                 self._st.session_state["pb_auth"] = auth_data
 
@@ -79,7 +84,7 @@ class PocketBaseAuthController:
         # A malformed or stale cookie should be cleared so the next run starts clean.
         user = self._service.restore_user(auth_data, self._user_cls)
         if user is None:
-            mark_browser_auth_for_clear()
+            self._browser_session.mark_for_clear()
             self._st.session_state.pop("pb_auth", None)
             self._st.session_state.pop("user", None)
             return
@@ -122,7 +127,7 @@ class PocketBaseAuthController:
         )
         # Clear both server-side state and the browser cookie bridge.
         self._clear_auth_store()
-        mark_browser_auth_for_clear()
+        self._browser_session.mark_for_clear()
         self._st.session_state.pop("pb_auth", None)
         self._st.session_state.pop("user", None)
 

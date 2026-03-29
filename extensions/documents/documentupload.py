@@ -570,7 +570,7 @@ def update_document(
         existing_path=existing_path,
         data_dir=data_dir,
         backup_dir=backup_dir,
-        client=client,
+        document_controller=document_controller,
     )
 
     ids_changed = set(needed_id or []) != set(orig_needed_id or [])
@@ -662,7 +662,7 @@ def show_version_list(
     existing_path: Path,
     data_dir: Path,
     backup_dir: Path,
-    client: PocketBase,
+    document_controller: DocumentController,
 ) -> None:
     """Show a list of backup versions for a document and allow restoring a previous version."""
     backup_files = []
@@ -718,7 +718,7 @@ def show_version_list(
                         (str(restored_path), restored_path.name, mime)
                     ),
                 }
-                client.collection("documents").update(record_id, payload)
+                document_controller.update_record(record_id, payload)
                 st.session_state["upload_success_msg"] = "Version restored."
                 st.rerun()
             except Exception as e:

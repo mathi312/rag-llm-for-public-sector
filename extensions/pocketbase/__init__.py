@@ -8,6 +8,7 @@ from pocketbase import PocketBase
 from extensions.logger import Logger
 from .pocketbase_messages import PBError, PBInfo
 from extensions.user import User
+from .pocketbase_browser_session import PocketBaseBrowserSession
 from .pocketbase_controller import PocketBaseAuthController
 from .pocketbase_repository import PocketBaseAuthRepository
 from .pocketbase_service import PocketBaseAuthService
@@ -27,7 +28,15 @@ def set_auth_repository_factory(factory: Callable[[object], object]) -> None:
 def _build_controller() -> PocketBaseAuthController:
     repository = _auth_repository_factory(client)
     service = PocketBaseAuthService(repository, logger)
-    return PocketBaseAuthController(service, st, User, logger, client=client)
+    browser_session = PocketBaseBrowserSession(st)
+    return PocketBaseAuthController(
+        service,
+        st,
+        User,
+        logger,
+        browser_session,
+        client=client,
+    )
 
 
 def restore_session() -> None:

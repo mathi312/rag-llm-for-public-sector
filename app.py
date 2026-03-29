@@ -1,19 +1,19 @@
 import streamlit as st
+from extensions.app_session import initialize_app_session
 from extensions.pocketbase import is_authenticated, logout_user, restore_session
-from extensions.pocketbase.pocketbase_browser_session import (
-    browser_auth_clear_pending,
-    flush_browser_auth_clear,
-    sync_browser_auth,
-)
+from extensions.pocketbase.pocketbase_browser_session import PocketBaseBrowserSession
 
 # Initialize authentication session
-if browser_auth_clear_pending():
-    flush_browser_auth_clear()
+browser_session = PocketBaseBrowserSession(st)
+initialize_app_session(st)
+
+if browser_session.clear_pending():
+    browser_session.flush_clear()
     st.session_state.pop("pb_auth", None)
     st.session_state.pop("user", None)
 else:
     restore_session()
-    sync_browser_auth(st.session_state.get("pb_auth"))
+    browser_session.sync_auth(st.session_state.get("pb_auth"))
 
 # Define the pages
 pages: dict[str, list[st.Page]] = {}

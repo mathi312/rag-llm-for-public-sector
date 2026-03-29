@@ -15,6 +15,7 @@ from chat import create_rag_chain, answer_question
 
 import time
 
+from extensions.app_session import initialize_app_session, reset_chat_context
 from extensions.report_generator.report_generator import print_report, send_report_via_email
 from extensions.report_generator.report import Report
 from extensions.report_generator.excpetions import *
@@ -33,6 +34,13 @@ def refresh_questions():
         st.session_state.example_questions = questions
     else:
         st.session_state.questions_error = True
+
+
+def render_new_chat():
+    if st.button("🆕 New chat", use_container_width=True):
+        start_new_chat()
+        st.rerun()
+
 
 def render_suggestions():
     st.button("🔄 New Questions", on_click=refresh_questions)
@@ -73,30 +81,9 @@ build_mode = "Use existing index"
 process_btn = False
 
 # --- SESSION STATE ---
-if "provider" not in st.session_state:
-    st.session_state.provider = provider
-if "selected_model" not in st.session_state:
-    st.session_state.selected_model = selected_model
-if "embedding_model_name" not in st.session_state:
-    st.session_state.embedding_model_name = embedding_model_name
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = None
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "id_uploaded" not in st.session_state:
-    st.session_state.id_uploaded = False
-if "id_document" not in st.session_state:
-    st.session_state.id_document = None
-if "report" not in st.session_state:
-    st.session_state.report = None
-if "active_source" not in st.session_state:
-    st.session_state.active_source = None
+initialize_app_session(st)
 if "user" not in st.session_state:
     st.session_state.user = get_user_from_auth_store()
-if "urls" not in st.session_state:
-    st.session_state.urls = []
-if "url_input" not in st.session_state:
-    st.session_state.url_input = ""
 
 # callback to add url to the urls in the sidebar
 def add_url():
@@ -104,6 +91,11 @@ def add_url():
     if url and url not in st.session_state.urls:
         st.session_state.urls.append(url)
     st.session_state.url_input = ""
+
+
+def start_new_chat():
+    """Start a fresh conversation without rebuilding the current index."""
+    reset_chat_context(st)
 
 # helper to handle the upload of an id
 def handle_id_upload(id_image, id_type: IdType | None = None):
@@ -404,7 +396,12 @@ if process_btn:
 if st.session_state.vector_store:
     st.divider()
 
-    render_suggestions()
+    question_action_col, chat_action_col = st.columns([5, 1])
+    with question_action_col:
+        render_suggestions()
+    with chat_action_col:
+        render_new_chat()
+
     auto_send = st.session_state.pop("auto_send", False)
     prefill = st.session_state.pop("prefill", "")
     user_input = st.chat_input("Frage stellen …")  # bleibt immer sichtbar

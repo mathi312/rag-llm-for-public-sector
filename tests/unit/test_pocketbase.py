@@ -1,7 +1,6 @@
 import pytest
 
 from extensions import pocketbase as pb
-from extensions.pocketbase import pocketbase_controller as pb_controller
 from extensions.pocketbase import pocketbase_browser_session
 
 
@@ -82,14 +81,26 @@ class DummyRecord:
 def browser_auth_stub(monkeypatch):
     browser_auth = {"value": None, "clear_marked": False}
 
-    def load_auth_from_cookies():
-        return browser_auth["value"]
+    class FakeBrowserSession:
+        def __init__(self, streamlit_module):
+            self.streamlit_module = streamlit_module
 
-    def mark_browser_auth_for_clear():
-        browser_auth["clear_marked"] = True
+        def load_auth(self):
+            return browser_auth["value"]
 
-    monkeypatch.setattr(pb_controller, "load_auth_from_cookies", load_auth_from_cookies)
-    monkeypatch.setattr(pb_controller, "mark_browser_auth_for_clear", mark_browser_auth_for_clear)
+        def mark_for_clear(self):
+            browser_auth["clear_marked"] = True
+
+        def clear_pending(self):
+            return browser_auth["clear_marked"]
+
+        def flush_clear(self):
+            browser_auth["clear_marked"] = False
+
+        def sync_auth(self, auth_data):
+            browser_auth["synced"] = auth_data
+
+    monkeypatch.setattr(pb, "PocketBaseBrowserSession", FakeBrowserSession)
     return browser_auth
 
 
@@ -198,13 +209,13 @@ def test_sync_browser_auth_renders_component(monkeypatch):
         captured["height"] = height
 
     monkeypatch.setattr(pocketbase_browser_session.components, "html", fake_html)
-    pocketbase_browser_session.st.session_state = {}
+    stub_streamlit = type("StubSt", (), {"session_state": {}})()
 
     auth_data = {
         "token": "abc",
         "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
     }
-    pocketbase_browser_session.sync_browser_auth(auth_data)
+    pocketbase_browser_session.PocketBaseBrowserSession(stub_streamlit).sync_auth(auth_data)
 
     assert "document.cookie" in captured["body"]
     assert captured["height"] == 0
