@@ -1,6 +1,8 @@
 import pytest
 
 from extensions import pocketbase as pb
+from extensions.pocketbase import pocketbase_controller as pb_controller
+from extensions.pocketbase import pocketbase_browser_session
 
 
 """
@@ -76,6 +78,21 @@ class DummyRecord:
         self.admin = admin
 
 
+@pytest.fixture(autouse=True)
+def browser_auth_stub(monkeypatch):
+    browser_auth = {"value": None, "clear_marked": False}
+
+    def load_auth_from_cookies():
+        return browser_auth["value"]
+
+    def mark_browser_auth_for_clear():
+        browser_auth["clear_marked"] = True
+
+    monkeypatch.setattr(pb_controller, "load_auth_from_cookies", load_auth_from_cookies)
+    monkeypatch.setattr(pb_controller, "mark_browser_auth_for_clear", mark_browser_auth_for_clear)
+    return browser_auth
+
+
 @pytest.fixture
 def mock_client(monkeypatch):
     client = MockClient()
@@ -90,7 +107,7 @@ def stub_st(monkeypatch):
     return stub
 
 
-def test_restore_session_no_auth(monkeypatch, mock_client, stub_st):
+def test_restore_session_no_auth(mock_client, stub_st, browser_auth_stub):
     """Test restoring session when no auth data is present."""
     pb.restore_session()
     assert mock_client.auth_store.token == ""
@@ -107,6 +124,21 @@ def test_restore_session_with_valid_data(mock_client, stub_st):
     assert stub_st.session_state["user"].email == "user@example.org"
 
 
+def test_restore_session_from_cookies(mock_client, stub_st, browser_auth_stub):
+    """Test restoring session from browser cookies after a reload."""
+    browser_auth_stub["value"] = {
+        "token": "t123",
+        "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
+    }
+    pb.restore_session()
+    assert stub_st.session_state["pb_auth"] == {
+        "token": "t123",
+        "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
+    }
+    assert stub_st.session_state["user"].email == "user@example.org"
+    assert browser_auth_stub["clear_marked"] is False
+
+
 def test_restore_session_with_invalid_data(stub_st):
     """Test restoring session with invalid auth data."""
     stub_st.session_state["pb_auth"] = {"token": "bad", "model": {}}  # Invalid data
@@ -115,13 +147,22 @@ def test_restore_session_with_invalid_data(stub_st):
     assert "user" not in stub_st.session_state
 
 
-def test_authenticate_user_success(monkeypatch, mock_client):
+def test_authenticate_user_success(monkeypatch, mock_client, stub_st, browser_auth_stub):
     """Test successful user authentication."""
-    data = {"token": "abc"}
+    record = DummyRecord()
+    data = type("AuthResult", (), {"token": "abc", "record": record})()
     collection = MockCollection(lambda e, p: data)
     mock_client._collection_obj = collection
     result = pb.authenticate_user("a@b.c", "pass")
     assert result is data
+    assert stub_st.session_state["pb_auth"] == {
+        "token": "abc",
+        "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
+    }
+    assert mock_client.auth_store.token == ""
+    log_path = pb.logger._get_today_logfile()
+    assert log_path.exists()
+    assert "logged in successfully" in log_path.read_text(encoding="utf-8")
 
 
 def test_authenticate_user_failure(monkeypatch):
@@ -135,7 +176,7 @@ def test_authenticate_user_failure(monkeypatch):
     assert result == pb.PBError.AUTHENTICATION_FAILED.name
 
 
-def test_logout_user(mock_client, stub_st):
+def test_logout_user(mock_client, stub_st, browser_auth_stub):
     """Test user logout functionality."""
     stub_st.session_state["pb_auth"] = {"token": "t"} # Set up session state
     stub_st.session_state["user"] = {"id": 1} # Set up user state
@@ -145,6 +186,28 @@ def test_logout_user(mock_client, stub_st):
     assert "pb_auth" not in stub_st.session_state
     assert "user" not in stub_st.session_state
     assert mock_client.auth_store.cleared is True # Auth store clear method should be called
+    assert browser_auth_stub["clear_marked"] is True
+
+
+def test_sync_browser_auth_renders_component(monkeypatch):
+    """Browser auth sync should inject the client-side persistence script."""
+    captured = {}
+
+    def fake_html(body, height):
+        captured["body"] = body
+        captured["height"] = height
+
+    monkeypatch.setattr(pocketbase_browser_session.components, "html", fake_html)
+    pocketbase_browser_session.st.session_state = {}
+
+    auth_data = {
+        "token": "abc",
+        "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
+    }
+    pocketbase_browser_session.sync_browser_auth(auth_data)
+
+    assert "document.cookie" in captured["body"]
+    assert captured["height"] == 0
 
 
 def test_is_authenticated(stub_st):
