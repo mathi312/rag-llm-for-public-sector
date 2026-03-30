@@ -662,7 +662,8 @@ def show_version_list(
     existing_path: Path,
     data_dir: Path,
     backup_dir: Path,
-    document_controller: DocumentController,
+    document_controller: DocumentController | None = None,
+    client=None,
 ) -> None:
     """Show a list of backup versions for a document and allow restoring a previous version."""
     backup_files = []
@@ -718,7 +719,14 @@ def show_version_list(
                         (str(restored_path), restored_path.name, mime)
                     ),
                 }
-                document_controller.update_record(record_id, payload)
+                if document_controller is not None:
+                    document_controller.update_record(record_id, payload)
+                elif client is not None:
+                    client.collection("documents").update(record_id, payload)
+                else:
+                    raise ValueError(
+                        "Either document_controller or client must be provided."
+                    )
                 st.session_state["upload_success_msg"] = "Version restored."
                 st.rerun()
             except Exception as e:

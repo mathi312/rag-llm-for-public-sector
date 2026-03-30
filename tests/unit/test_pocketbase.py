@@ -279,8 +279,13 @@ def test_get_user_from_auth_store_returns_user(monkeypatch, stub_st):
             return {"user": record}
 
     monkeypatch.setattr(pb, "User", DummyUser)
-    stub_st.session_state["pb_auth"] = {"token": "t", "model": {"id": 1}}
-    assert pb.get_user_from_auth_store() == {"user": {"id": 1}}
+    stub_st.session_state["pb_auth"] = {
+        "token": "t",
+        "model": {"id": 1, "email": "user@example.org"},
+    }
+    assert pb.get_user_from_auth_store() == {
+        "user": {"id": 1, "email": "user@example.org"}
+    }
 
 
 def test_get_user_from_auth_store_missing_token_or_model(stub_st):
