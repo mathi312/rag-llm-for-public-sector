@@ -7,10 +7,12 @@ from extensions.predefined_questions.exceptions import (
     QuestionUpdateError,
 )
 from extensions.logger import Logger
+from extensions.pocketbase.pocketbase_client import get_pocketbase_client
 
 logger = Logger()
 
-repo = QuestionRepository()
+client = get_pocketbase_client()
+repo = QuestionRepository(client=client)
 service = QuestionService(repo)
 
 
@@ -31,7 +33,6 @@ def get_questions(random: bool = False) -> list[Question]:
         logger.log_error(f"Failed to retrieve questions: {e}")
         return []
 
-
 def generate_questions(document_name: str, provider: str, model_name: str) -> list[str]:
     """
     Api to geneerate example questions for the provided document.
@@ -45,7 +46,6 @@ def generate_questions(document_name: str, provider: str, model_name: str) -> li
         logger.log_error(f"LLM invocation failed during question generation: {e}")
         return []
 
-
 def save_questions(questions: list[str]) -> bool:
     """
     Api to save the provided questions.
@@ -58,7 +58,6 @@ def save_questions(questions: list[str]) -> bool:
     except (QuestionFetchError, QuestionCreateError) as e:
         logger.log_error(f"Failed to save questions: {e}")
         return False
-
 
 def update_times_asked_of_question(question_id: str) -> bool:
     """

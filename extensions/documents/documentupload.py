@@ -17,9 +17,10 @@ import hashlib
 from extensions.documents import DocumentController, build_document_controller
 from extensions.logger import Logger
 from extensions.pocketbase.pocketbase_messages import PBLog
+from extensions.pocketbase.pocketbase_client import get_pocketbase_client
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
-client = PocketBase(pb_url)
+client = get_pocketbase_client()
 logger = Logger()
 
 ALLOWED_DOCUMENT_SUFFIXES = {".pdf", ".docx"}

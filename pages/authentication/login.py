@@ -6,6 +6,9 @@ from extensions.pocketbase import authenticate_user
 from extensions.pocketbase.pocketbase_messages import PBError, PBWarning, PBSuccess, PBLog
 from extensions.user import User
 from extensions.logger import Logger
+from extensions.pocketbase.pocketbase_client import get_pocketbase_client
+
+pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 
 st.set_page_config(page_title="Login", layout="centered")
 
@@ -37,7 +40,6 @@ with st.form("login_form"):
                 }
 
                 # Also save to PocketBase auth_store for persistence across page reloads
-                pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
                 pb_client = PocketBase(pb_url)
                 auth_store = getattr(pb_client, "auth_store", None)
                 if auth_store and hasattr(auth_store, "save"):

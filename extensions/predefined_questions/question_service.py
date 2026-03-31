@@ -12,7 +12,7 @@ from extensions.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionUpdateError,
 )
-from models import get_llm
+from extensions.models.models import get_llm
 
 DATA_DIR = BASE_DIR/ "data"
 

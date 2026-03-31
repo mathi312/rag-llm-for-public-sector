@@ -11,6 +11,7 @@ from extensions.user import User
 from .pocketbase_controller import PocketBaseAuthController
 from .pocketbase_repository import PocketBaseAuthRepository
 from .pocketbase_service import PocketBaseAuthService
+from .pocketbase_client import get_pocketbase_client
 
 logger = Logger()
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")

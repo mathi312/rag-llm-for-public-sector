@@ -9,7 +9,6 @@ import streamlit as st
 from pathlib import Path
 
 from loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
-from models import get_embeddings, get_llm
 from indexing import load_index, build_index_from_documents
 from chat import create_rag_chain, answer_question
 
@@ -20,8 +19,9 @@ from extensions.report_generator.report import Report
 from extensions.report_generator.excpetions import *
 from extensions.idprovider import *
 from extensions.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
-from pages.components.user_menu import user_menu
 from extensions.predefined_questions.question_controller import get_questions, update_times_asked_of_question
+from extensions.models.models import get_embeddings, get_llm
+from pages.components.user_menu import user_menu
 
 
 if "example_questions" not in st.session_state:
