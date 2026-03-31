@@ -1,8 +1,3 @@
-import os
-import random
-
-from pocketbase import PocketBase
-
 from extensions.predefined_questions.question import Question
 from extensions.predefined_questions.exceptions import (
     QuestionFetchError,
@@ -11,17 +6,12 @@ from extensions.predefined_questions.exceptions import (
 )
 
 
-PB_URL = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
-CLIENT = PocketBase(PB_URL)
-
-CLIENT.admins.auth_with_password(
-    os.getenv("POCKETBASE_ADMIN_USERNAME"), os.getenv("POCKETBASE_ADMIN_PASSWORD")
-)
-
 class QuestionRepository:
     """
     The Repository for saving and retrieving questions form pocketbase.
     """
+    def __init__(self, client):
+        self.client = client
 
     def get_most_asked_question_from_pb(self, num_of_questions: int = 4) -> list[Question]:
         """
@@ -31,7 +21,7 @@ class QuestionRepository:
             QuestionFetchError: If it fails to fetch the most asked questions from pocketbase.
         """
         try:
-            most_asked_questions = CLIENT.collection("questions").get_list(
+            most_asked_questions = self.client.collection("questions").get_list(
                 page=1,
                 per_page=num_of_questions,
                 query_params={"sort": "-times_asked"},
@@ -62,7 +52,7 @@ class QuestionRepository:
                 [f'id != "{qid}"' for qid in exclude_ids]
             )
 
-            all_questions = CLIENT.collection("questions").get_list(
+            all_questions = self.client.collection("questions").get_list(
                 page=1,
                 per_page=num_of_questions,
                 query_params={
@@ -89,7 +79,7 @@ class QuestionRepository:
             QuestionFetchError: If the PocketBase request fails unexpectedly.
         """
         try:
-            result = CLIENT.collection("questions").get_first_list_item(
+            result = self.client.collection("questions").get_first_list_item(
                 f'question = "{question_text}"'
             )
             return result is not None
@@ -113,7 +103,7 @@ class QuestionRepository:
             QuestionCreateError: If the creation of the question failes.
         """
         try:
-            CLIENT.collection("questions").create(
+            self.client.collection("questions").create(
                 {
                     "question": question_text,
                     "times_asked": 0,
@@ -133,7 +123,7 @@ class QuestionRepository:
             QuestionUpdateError: If update of the times_asked field fails.
         """
         try:
-            CLIENT.collection("questions").update(
+            self.client.collection("questions").update(
                 question_id,
                 {"times_asked+": 1}
             )
