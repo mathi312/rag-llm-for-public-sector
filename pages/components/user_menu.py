@@ -1,6 +1,7 @@
 import streamlit as st
 from extensions.user import User
 from extensions.pocketbase import logout_user
+from extensions.app_session import reset_chat_context
 
 def user_menu(user: User) -> None:
     """Render a user menu with profile info and logout option."""
@@ -23,4 +24,5 @@ def user_menu(user: User) -> None:
             type="primary"
         ):
             logout_user()
+            reset_chat_context(st)
             st.switch_page("pages/ragllm.py")
