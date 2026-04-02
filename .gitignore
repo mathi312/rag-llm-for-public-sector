@@ -10,6 +10,8 @@
 !models.py
 !extensions/
 !extensions/**
+!infrastructure/
+!infrastructure/**
 !pages/
 !pages/**
 !pocketbase/

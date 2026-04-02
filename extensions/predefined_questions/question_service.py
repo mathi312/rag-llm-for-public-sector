@@ -4,7 +4,7 @@ from config import BASE_DIR
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-from extensions.predefined_questions.question_repository import QuestionRepository
+from infrastructure.persistence.question_repository import QuestionRepository
 from extensions.documents.documentupload import extract_text_from_file
 from extensions.predefined_questions.question import Question
 from extensions.predefined_questions.exceptions import (

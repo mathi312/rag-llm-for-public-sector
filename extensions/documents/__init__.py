@@ -1,8 +1,8 @@
 from pathlib import Path
 
+from infrastructure.persistence import DocumentRepository
 from .document_management_controller import DocumentManagementController
 from .documentupload_controller import DocumentController
-from .documentupload_repository import DocumentRepository
 from .documentupload_service import DocumentStorageService
 
 

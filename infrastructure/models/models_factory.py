@@ -8,7 +8,7 @@ from enum import Enum
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-from extensions.models.model_config import ModelConfig
+from .model_config import ModelConfig
 
 
 class Provider(str, Enum):

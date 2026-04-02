@@ -17,7 +17,7 @@ import hashlib
 from extensions.documents import DocumentController, build_document_controller
 from extensions.logger import Logger
 from extensions.pocketbase.pocketbase_messages import PBLog
-from extensions.pocketbase.pocketbase_client import get_pocketbase_client
+from infrastructure.pocketbase import get_pocketbase_client
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")
 client = get_pocketbase_client()

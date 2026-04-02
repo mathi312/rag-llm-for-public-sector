@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from extensions.models.models_factory import _require_api_key, LlmFactory, EmbeddingsFactory, Provider
+from infrastructure.models import LlmFactory, EmbeddingsFactory, Provider, ModelConfig
 
 
 def make_config(
@@ -19,12 +19,15 @@ def make_config(
     config.ollama_base_url = ollama_base_url
     return config
 
+def _require_api_key(config: ModelConfig, context: str) -> None:
+    if not config.api_key:
+        raise ValueError(f"OpenAI API key is required for {context}.")
 
 class TestEmbeddingsFactory:
     def setup_method(self):
         self.factory = EmbeddingsFactory()
 
-    @patch("extensions.models.models_factory.OpenAIEmbeddings")
+    @patch("infrastructure.models.models_factory.OpenAIEmbeddings")
     def test_create_openai_embeddings_returns_instance(self, mock_embeddings):
         config = make_config(provider=Provider.OPENAI)
         result = self.factory.create_embeddings(config)
@@ -34,13 +37,13 @@ class TestEmbeddingsFactory:
         )
         assert result is mock_embeddings.return_value
 
-    @patch("extensions.models.models_factory.OpenAIEmbeddings")
+    @patch("infrastructure.models.models_factory.OpenAIEmbeddings")
     def test_create_openai_embeddings_raises_without_api_key(self, _mock):
         config = make_config(provider=Provider.OPENAI, api_key=None)
         with pytest.raises(ValueError, match="OpenAI API key is required for OpenAI embeddings"):
             self.factory.create_embeddings(config)
 
-    @patch("extensions.models.models_factory.OllamaEmbeddings")
+    @patch("infrastructure.models.models_factory.OllamaEmbeddings")
     def test_create_ollama_embeddings_returns_instance(self, mock_embeddings):
         config = make_config(provider=Provider.OLLAMA, api_key=None)
         result = self.factory.create_embeddings(config)
@@ -50,7 +53,7 @@ class TestEmbeddingsFactory:
         )
         assert result is mock_embeddings.return_value
 
-    @patch("extensions.models.models_factory.OllamaEmbeddings")
+    @patch("infrastructure.models.models_factory.OllamaEmbeddings")
     def test_create_ollama_embeddings_does_not_require_api_key(self, _mock):
         config = make_config(provider=Provider.OLLAMA, api_key=None)
         self.factory.create_embeddings(config)  # should not raise-
@@ -65,7 +68,7 @@ class TestLlmFactory:
     def setup_method(self):
         self.factory = LlmFactory()
 
-    @patch("extensions.models.models_factory.ChatOpenAI")
+    @patch("infrastructure.models.models_factory.ChatOpenAI")
     def test_create_openai_llm_returns_instance(self, mock_chat_openai):
         config = make_config(provider=Provider.OPENAI)
         result = self.factory.create_llm(config)
@@ -76,13 +79,13 @@ class TestLlmFactory:
         )
         assert result is mock_chat_openai.return_value
 
-    @patch("extensions.models.models_factory.ChatOpenAI")
+    @patch("infrastructure.models.models_factory.ChatOpenAI")
     def test_create_openai_llm_raises_without_api_key(self, _mock):
         config = make_config(provider=Provider.OPENAI, api_key=None)
         with pytest.raises(ValueError, match="OpenAI API key is required for OpenAI LLM"):
             self.factory.create_llm(config)
 
-    @patch("extensions.models.models_factory.ChatOllama")
+    @patch("infrastructure.models.models_factory.ChatOllama")
     def test_create_ollama_llm_returns_instance(self, mock_chat_ollama):
         config = make_config(provider=Provider.OLLAMA, api_key=None)
         result = self.factory.create_llm(config)
@@ -93,7 +96,7 @@ class TestLlmFactory:
         )
         assert result is mock_chat_ollama.return_value
 
-    @patch("extensions.models.models_factory.ChatOllama")
+    @patch("infrastructure.models.models_factory.ChatOllama")
     def test_create_ollama_llm_does_not_require_api_key(self, _mock):
         config = make_config(provider=Provider.OLLAMA, api_key=None)
         self.factory.create_llm(config)
@@ -117,13 +120,13 @@ class TestRequireApiKey:
 
     def test_passes_when_api_key_present(self):
         config = make_config(api_key="sk-valid")
-        _require_api_key(config, "TestCtx") 
+        _require_api_key(config, "TestCtx")
 
 class TestModuleSingletons:
     def test_llm_factory_singleton_is_llm_factory(self):
-        from extensions.models.models_factory import llm_factory
+        from infrastructure.models import llm_factory
         assert isinstance(llm_factory, LlmFactory)
 
     def test_embeddings_factory_singleton_is_embeddings_factory(self):
-        from extensions.models.models_factory import embeddings_factory
+        from infrastructure.models import embeddings_factory
         assert isinstance(embeddings_factory, EmbeddingsFactory)

@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
+from infrastructure.persistence.question_repository import QuestionRepository
 from extensions.predefined_questions.question import Question
-from extensions.predefined_questions.question_repository import QuestionRepository
 from extensions.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionFetchError,

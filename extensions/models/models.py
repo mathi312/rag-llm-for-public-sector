@@ -1,5 +1,4 @@
-from extensions.models.model_config import ModelConfig
-from extensions.models.models_factory import llm_factory, embeddings_factory
+from infrastructure.models import ModelConfig, llm_factory, embeddings_factory
 
 
 def get_embeddings(provider: str, model_name: str, api_key: str = None):

@@ -29,7 +29,7 @@ if "generating_for" not in st.session_state:
 if "pending_questions" in st.session_state:
     questions_to_show = st.session_state.pop("pending_questions")
     show_questions_dialog(questions_to_show)
-    
+
 controller = DocumentManagementController(
     streamlit_module=st,
     show_questions_dialog_fn=show_questions_dialog,

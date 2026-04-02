@@ -2,7 +2,7 @@ import pytest
 import os
 from unittest.mock import patch
 
-from extensions.models.model_config import ModelConfig
+from infrastructure.models import ModelConfig
 
 
 OLLAMA_DEFAULT = "http://localhost:11434"

@@ -1,4 +1,5 @@
-from extensions.predefined_questions.question_repository import QuestionRepository
+from infrastructure.persistence import QuestionRepository
+from infrastructure.pocketbase import get_pocketbase_client
 from extensions.predefined_questions.question_service import QuestionService
 from extensions.predefined_questions.question import Question
 from extensions.predefined_questions.exceptions import (
@@ -7,7 +8,6 @@ from extensions.predefined_questions.exceptions import (
     QuestionUpdateError,
 )
 from extensions.logger import Logger
-from extensions.pocketbase.pocketbase_client import get_pocketbase_client
 
 logger = Logger()
 
