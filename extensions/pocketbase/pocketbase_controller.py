@@ -6,14 +6,24 @@ from .pocketbase_messages import PBError, PBInfo, PBLabel, PBLog
 class PocketBaseAuthController:
     """Controller for auth-related use cases and UI-facing status handling."""
 
-    def __init__(self, service, streamlit_module, user_cls, logger, client=None) -> None:
+    def __init__(
+        self,
+        service,
+        streamlit_module,
+        user_cls,
+        logger,
+        browser_session,
+        client=None,
+    ) -> None:
         self._service = service
         self._st = streamlit_module
         self._user_cls = user_cls
         self._logger = logger
+        self._browser_session = browser_session
         self._client = client
 
     def _get_session_auth(self) -> dict | None:
+        # session_state is the fast path within a running Streamlit session.
         auth_data = self._st.session_state.get("pb_auth")
         if not isinstance(auth_data, dict):
             return None
@@ -25,34 +35,56 @@ class PocketBaseAuthController:
 
         return auth_data
 
+    def _clear_auth_store(self) -> None:
+        # The shared PocketBase client must never keep auth between users.
+        auth_store = getattr(self._client, "auth_store", None)
+        if auth_store is not None and hasattr(auth_store, "clear"):
+            auth_store.clear()
+
+    @staticmethod
+    def _serialize_model(model) -> dict | None:
+        if model is None:
+            return None
+        if isinstance(model, dict):
+            return dict(model)
+
+        return {
+            "id": getattr(model, "id", ""),
+            "email": getattr(model, "email", ""),
+            "name": getattr(model, "name", None),
+            "admin": bool(getattr(model, "admin", False)),
+        }
+
+    def _build_auth_payload(self, token: str | None, model) -> dict | None:
+        # Only persist the fields needed to reconstruct the user after a reload.
+        serialized_model = self._serialize_model(model)
+        if not token or serialized_model is None:
+            return None
+
+        return {
+            "token": token,
+            "model": serialized_model,
+        }
+
     def restore_session(self) -> None:
-        # Try to get auth from session_state first
+        # Prefer the in-memory session for normal navigation within the same run.
         auth_data = self._get_session_auth()
-        
-        # # If not in session_state, try to restore from auth_store
-        # if auth_data is None and self._client is not None:
-        #     auth_store = getattr(self._client, "auth_store", None)
-        #     if auth_store and hasattr(auth_store, "token") and auth_store.token:
-        #         # auth_store has token and model, restore them to session
-        #         try:
-        #             auth_data = {
-        #                 "token": auth_store.token,
-        #                 "model": auth_store.model
-        #             }
-        #             self._st.session_state["pb_auth"] = auth_data
-        #         except Exception as e:
-        #             self._logger.log_warning(
-        #                 PBLog.RESTORE_AUTH_FROM_STORE_FAILED.value.format(error=e)
-        #             )
-        
-        # Now proceed with restoring the user
+
+        # After a browser reload, rehydrate the Streamlit session from the cookie.
+        if auth_data is None:
+            auth_data = self._browser_session.load_auth()
+            if auth_data is not None:
+                self._st.session_state["pb_auth"] = auth_data
+
         if auth_data is None:
             self._st.session_state.pop("pb_auth", None)
             self._st.session_state.pop("user", None)
             return
 
+        # A malformed or stale cookie should be cleared so the next run starts clean.
         user = self._service.restore_user(auth_data, self._user_cls)
         if user is None:
+            self._browser_session.mark_for_clear()
             self._st.session_state.pop("pb_auth", None)
             self._st.session_state.pop("user", None)
             return
@@ -63,6 +95,27 @@ class PocketBaseAuthController:
         auth_data = self._service.authenticate_user(email, password)
         if auth_data is None:
             return PBError.AUTHENTICATION_FAILED.name
+
+        # Normalize the PocketBase response before storing it in Streamlit/browser state.
+        payload = self._build_auth_payload(
+            getattr(auth_data, "token", None),
+            getattr(auth_data, "record", None),
+        )
+        if payload is not None:
+            self._st.session_state["pb_auth"] = payload
+            user = self._service.restore_user(payload, self._user_cls)
+            if user is not None:
+                self._st.session_state["user"] = user
+                self._logger.log_info(
+                    PBLog.USER_LOGGED_IN_SUCCESS.value.format(email=user.email)
+                )
+            else:
+                self._logger.log_info(
+                    PBLog.USER_LOGGED_IN_SUCCESS.value.format(email=email)
+                )
+
+        # Never leave the shared PocketBase client authenticated across requests.
+        self._clear_auth_store()
         return auth_data
 
     def logout_user(self) -> None:
@@ -72,9 +125,9 @@ class PocketBaseAuthController:
                 email=current_user.email if current_user else PBInfo.UNKNOWN_USER.value
             )
         )
-        auth_store = getattr(self._client, "auth_store", None)
-        if auth_store is not None and hasattr(auth_store, "clear"):
-            auth_store.clear()
+        # Clear both server-side state and the browser cookie bridge.
+        self._clear_auth_store()
+        self._browser_session.mark_for_clear()
         self._st.session_state.pop("pb_auth", None)
         self._st.session_state.pop("user", None)
 

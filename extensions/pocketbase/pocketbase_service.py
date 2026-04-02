@@ -22,6 +22,9 @@ class PocketBaseAuthService:
 
     def restore_user(self, auth_data: dict, user_cls):
         model = auth_data.get("model")
+        if not self._has_required_user_fields(model):
+            return None
+
         try:
             return user_cls.from_pb_record(model)
         except AttributeError as exc:
@@ -34,6 +37,18 @@ class PocketBaseAuthService:
                 PBLog.RESTORE_USER_UNEXPECTED_ERROR.value.format(error=exc)
             )
             return None
+
+    @staticmethod
+    def _has_required_user_fields(model) -> bool:
+        if model is None:
+            return False
+
+        if isinstance(model, dict):
+            # We check for 'id' and 'email' as they are essential for user identification and authentication.
+            return bool(model.get("id")) and bool(model.get("email"))
+
+        # Check if attributes 'id' and 'email' exist and are truthy for non-dict models.
+        return bool(getattr(model, "id", None)) and bool(getattr(model, "email", None))
 
     @staticmethod
     def is_admin(model) -> bool:

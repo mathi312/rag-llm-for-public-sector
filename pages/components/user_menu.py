@@ -16,10 +16,11 @@ def user_menu(user: User) -> None:
             st.markdown("**Role:** Admin")
 
         st.write("")
-        st.button(
+        if st.button(
             "Logout",
             key="logout_btn",
-            on_click=logout_user,
             use_container_width=True,
             type="primary"
-        )
+        ):
+            logout_user()
+            st.switch_page("pages/ragllm.py")

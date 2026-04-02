@@ -129,8 +129,8 @@ if docs:
             ):
                 questions = generate_questions(
                     document_name=generating_doc.get("original_name"),
-                    provider=st.session_state.provider or "Local (Ollama)",
-                    model_name=st.session_state.selected_model or "llama3.2",
+                    provider=st.session_state.get("provider") or "Local (Ollama)",
+                    model_name=st.session_state.get("selected_model") or "llama3.2",
                 )
             st.session_state.generating_for = None  # clear loading state
             if questions:

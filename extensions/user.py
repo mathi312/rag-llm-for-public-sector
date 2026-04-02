@@ -14,6 +14,14 @@ class User:
     
     @classmethod
     def from_pb_record(cls, record) -> Self:
+        if isinstance(record, dict):
+            return cls(
+                id=str(record.get("id", "")),
+                email=record.get("email", ""),
+                name=record.get("name"),
+                is_admin=bool(record.get("admin", False)),
+            )
+
         return cls(
             id=record.id,
             email=record.email,
