@@ -155,20 +155,23 @@ Open your web browser and navigate to:
 ## 6. Project Structure
 
     modular-rag-app/
-    ├── app.py              # Main UI (Streamlit)
-    ├── chat.py             # RAG & Q&A Logic
-    ├── config.py           # Global Settings
-    ├── indexing.py         # Vector Database Management
-    ├── loaders.py          # File Parsing (PDF/DOCX)
-    ├── models.py           # LLM Factory (Ollama/OpenAI switch)
-    ├── requirements.txt    # Python Dependencies
-    ├── Dockerfile          # App Container Definition
-    ├── docker-compose.yml      # Base service orchestration
-    ├── docker-compose.dev.yml  # Service Orchestration
-    ├── docker-compose.prod.yml  # Service Orchestration
-    ├── extensions/         # Folder for code extension (Feature Implementation)
-    ├── tests/              # Folder for test files (Test implementation)
-    └── data/               # Folder for static documents (User created)
+    ├── app.py                      # Main UI (Streamlit)
+    ├── chat.py                     # RAG & Q&A Logic
+    ├── config.py                   # Global Settings
+    ├── indexing.py                 # Vector Database Management
+    ├── loaders.py                  # File Parsing (PDF/DOCX)
+    ├── models.py                   # LLM Factory (Ollama/OpenAI switch)
+    ├── requirements.txt            # Python Dependencies
+    ├── .env.example                # Example environment variables
+    ├── Dockerfile                  # App Container Definition
+    ├── docker-compose.yml          # Base service orchestration
+    ├── docker-compose.dev.yml      # Service Orchestration
+    ├── docker-compose.prod.yml     # Service Orchestration
+    ├── pocketbase                  # Dockerfile for Pocketbase
+    ├── extensions/                 # Folder for code extension (Feature Implementation)
+    ├── pages/                      # Frontend UI
+    ├── tests/                      # Folder for test files (Test implementation)
+    └── data/                       # Folder for static documents (User created)
 
 ---
 
