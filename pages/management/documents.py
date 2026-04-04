@@ -6,7 +6,7 @@ from extensions.documents.documentupload import (
     confirm_delete_document,
     view_pdf_dialog,
 )
-from extensions.predefined_questions.question_controller import generate_questions
+from extensions.predefined_questions import generate_questions
 from extensions.documents.document_management_controller import DocumentManagementController
 from extensions.pocketbase import is_authenticated, user_is_admin
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog

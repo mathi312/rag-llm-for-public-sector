@@ -3,8 +3,8 @@ import re
 
 from typing import Any
 from unittest.mock import patch, MagicMock
-from extensions.report_generator.report import Report
-from extensions.user import User
+from domain.report.report import Report
+from domain.user.user import User
 
 
 def test_report_initialization():
@@ -61,7 +61,7 @@ def test_overwrites_existing_id_type():
     report.add_id_type("drivers_license")
     assert report.id_type == "drivers_license"
 
-@patch("extensions.report_generator.report.FPDF")
+@patch("domain.report.report.FPDF")
 def test_to_pdf_returns_bytes_without_user(mock_fpdf):
     mock_pdf = MagicMock()
     mock_pdf.output.return_value = b"%PDF-1.4"
@@ -77,7 +77,7 @@ def test_to_pdf_returns_bytes_without_user(mock_fpdf):
     assert len(pdf_bytes) > 0
     mock_pdf.add_page.assert_called_once()
 
-@patch("extensions.report_generator.report.FPDF")
+@patch("domain.report.report.FPDF")
 def test_to_pdf_returns_bytes_with_user(mock_fpdf):
     mock_pdf = MagicMock()
     mock_pdf.output.return_value = b"%PDF-1.4"
@@ -100,7 +100,7 @@ def test_to_pdf_returns_bytes_with_user(mock_fpdf):
     assert len(pdf_bytes) > 0
     mock_pdf.add_page.assert_called_once()
 
-@patch("extensions.report_generator.report.FPDF")
+@patch("domain.report.report.FPDF")
 def test_to_pdf_returns_bytes_with_id_type(mock_fpdf):
     mock_pdf = MagicMock()
     mock_pdf.output.return_value = b"%PDF-1.4"

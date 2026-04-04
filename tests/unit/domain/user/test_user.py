@@ -1,7 +1,7 @@
 import pytest
 from types import SimpleNamespace
 
-from extensions.user import User
+from domain.user.user import User
 
 def test_user_init_is_admin_normalization():
     user1 = User(id="1", email="a@test.com", is_admin=True)

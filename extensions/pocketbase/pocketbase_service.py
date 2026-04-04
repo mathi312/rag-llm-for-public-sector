@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from extensions.pocketbase.pocketbase_contracts import AuthRepositoryProtocol
-from extensions.pocketbase.pocketbase_messages import PBLog
+from domain.auth.pocketbase_messages import PBLog
 
 
 class PocketBaseAuthService:

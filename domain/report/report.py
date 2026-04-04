@@ -1,9 +1,10 @@
 from typing import Dict
-from fpdf import FPDF
-from datetime import datetime
 from zoneinfo import ZoneInfo
+from datetime import datetime
 
-from extensions.user import User
+from fpdf import FPDF
+
+from domain.user.user import User
 
 class Report:
     """The report that contains the chat history of the current session and the llm used."""

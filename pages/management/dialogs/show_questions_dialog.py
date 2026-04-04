@@ -2,7 +2,7 @@ from typing import List
 
 import streamlit as st
 
-from extensions.predefined_questions.question_controller import save_questions
+from extensions.predefined_questions import save_questions
 
 
 @st.dialog("Review Generated Questions")

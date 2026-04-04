@@ -1,5 +1,5 @@
-from extensions.predefined_questions.question import Question
-from extensions.predefined_questions.exceptions import (
+from domain.predefined_questions.question import Question
+from domain.predefined_questions.exceptions import (
     QuestionFetchError,
     QuestionCreateError,
     QuestionUpdateError,

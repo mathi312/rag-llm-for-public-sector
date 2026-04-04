@@ -3,13 +3,13 @@ import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-from extensions.predefined_questions.question import Question
-from extensions.predefined_questions.question_service import QuestionService
-from extensions.predefined_questions.exceptions import (
+from domain.predefined_questions.question import Question
+from domain.predefined_questions.exceptions import (
     QuestionCreateError,
     QuestionFetchError,
     QuestionUpdateError
 )
+from extensions.predefined_questions.question_service import QuestionService
 
 
 @pytest.fixture

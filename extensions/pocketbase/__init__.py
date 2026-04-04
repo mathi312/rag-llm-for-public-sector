@@ -6,9 +6,9 @@ import streamlit as st
 from pocketbase import PocketBase
 
 from extensions.logger import Logger
-from extensions.user import User
+from domain.user.user import User
+from domain.auth.pocketbase_messages import PBError, PBInfo
 from infrastructure.persistence import PocketBaseAuthRepository
-from .pocketbase_messages import PBError, PBInfo
 from .pocketbase_browser_session import PocketBaseBrowserSession
 from .pocketbase_controller import PocketBaseAuthController
 from .pocketbase_service import PocketBaseAuthService

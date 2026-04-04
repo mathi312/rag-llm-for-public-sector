@@ -12,6 +12,8 @@
 !extensions/**
 !infrastructure/
 !infrastructure/**
+!domain/
+!domain/**
 !pages/
 !pages/**
 !pocketbase/

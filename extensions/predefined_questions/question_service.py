@@ -1,18 +1,13 @@
-from pathlib import Path
 from config import BASE_DIR
+from pathlib import Path
 
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
 from infrastructure.persistence.question_repository import QuestionRepository
 from extensions.documents.documentupload import extract_text_from_file
-from extensions.predefined_questions.question import Question
-from extensions.predefined_questions.exceptions import (
-    QuestionFetchError,
-    QuestionCreateError,
-    QuestionUpdateError,
-)
-from extensions.models.models import get_llm
+from extensions.models import get_llm
+from domain.predefined_questions.question import Question
 
 DATA_DIR = BASE_DIR/ "data"
 

@@ -16,7 +16,7 @@ from datetime import datetime
 import hashlib
 from extensions.documents import DocumentController, build_document_controller
 from extensions.logger import Logger
-from extensions.pocketbase.pocketbase_messages import PBLog
+from domain.auth.pocketbase_messages import PBLog
 from infrastructure.pocketbase import get_pocketbase_client
 
 pb_url = os.getenv("POCKETBASE_URL", "http://127.0.0.1:8080")

@@ -1,5 +1,6 @@
 import streamlit as st
-from extensions.user import User
+
+from domain.user.user import User
 from extensions.pocketbase import logout_user
 from extensions.app_session import reset_chat_context
 

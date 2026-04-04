@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .pocketbase_messages import PBError, PBInfo, PBLabel, PBLog
+from domain.auth.pocketbase_messages import PBError, PBInfo, PBLabel, PBLog
 
 
 class PocketBaseAuthController:

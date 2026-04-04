@@ -16,11 +16,11 @@ import time
 
 from extensions.app_session import initialize_app_session, reset_chat_context
 from extensions.report_generator.report_generator import print_report, send_report_via_email
-from extensions.report_generator.report import Report
-from extensions.report_generator.excpetions import *
+from domain.report.report import Report
+from domain.report.excpetions import *
 from extensions.idprovider import *
 from extensions.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
-from extensions.predefined_questions.question_controller import get_questions, update_times_asked_of_question
+from extensions.predefined_questions import get_questions, update_times_asked_of_question
 from extensions.models.models import get_embeddings, get_llm
 from pages.components.user_menu import user_menu
 

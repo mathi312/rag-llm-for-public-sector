@@ -1,9 +1,9 @@
 import os
 
 from email.message import EmailMessage
-from extensions.user import User
-from extensions.report_generator.report import Report
-from extensions.report_generator.excpetions import (
+from domain.user.user import User
+from domain.report.report import Report
+from domain.report.excpetions import (
     EmptyReportError,
     PrinterBrokenError,
     EmptyEmailAddressError,

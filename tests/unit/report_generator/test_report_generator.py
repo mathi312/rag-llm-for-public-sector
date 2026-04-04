@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from email.message import EmailMessage
 
 from extensions.report_generator.report_generator import *
-from extensions.report_generator.report import Report
+from domain.report.report import Report
 
 def test_print_report_raises_error_when_report_is_none():
     with pytest.raises(EmptyReportError):

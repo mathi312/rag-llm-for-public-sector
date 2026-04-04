@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_core.language_models import BaseLanguageModel
 
-from extensions.report_generator.report import Report
+from domain.report.report import Report
 
 from config import (
     NO_CONTEXT_ANSWER,

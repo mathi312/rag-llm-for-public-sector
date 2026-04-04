@@ -1,9 +1,8 @@
-import streamlit as st
 import re
+import streamlit as st
+
 from extensions.pocketbase import authenticate_user
-from extensions.pocketbase.pocketbase_messages import PBError, PBWarning, PBSuccess, PBLog
-from extensions.user import User
-from extensions.pocketbase import pb_url
+from domain.auth.pocketbase_messages import PBError, PBWarning, PBSuccess
 
 st.set_page_config(page_title="Login", layout="centered")
 
