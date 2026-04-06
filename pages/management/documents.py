@@ -8,9 +8,20 @@ from extensions.documents.documentupload import (
 )
 from extensions.predefined_questions.question_controller import generate_questions
 from extensions.documents.document_management_controller import DocumentManagementController
+from extensions.pocketbase import is_authenticated, user_is_admin
 from pages.management.dialogs.show_questions_dialog import show_questions_dialog
 
 st.set_page_config(page_title="Document Management", layout="wide")
+
+if not is_authenticated():
+    st.error("Authentication required.")
+    st.switch_page("pages/authentication/login.py")
+    st.stop()
+
+if not user_is_admin():
+    st.error("Access denied. Admins only.")
+    st.switch_page("pages/ragllm.py")
+    st.stop()
 
 # Initialize loading state
 if "generating_for" not in st.session_state:

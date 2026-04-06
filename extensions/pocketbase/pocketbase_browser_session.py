@@ -13,6 +13,7 @@ class PocketBaseBrowserSession:
     COOKIE_MAX_AGE_SECONDS = 60 * 60 * 8
     COMPONENT_COUNTER_KEY = "_pb_browser_auth_component_counter"
     CLEAR_FLAG_KEY = "_pb_clear_browser_auth"
+    BLOCK_RESTORE_KEY = "_pb_block_browser_auth_restore"
 
     def __init__(self, streamlit_module) -> None:
         self._st = streamlit_module
@@ -88,6 +89,13 @@ class PocketBaseBrowserSession:
     def mark_for_clear(self) -> None:
         # Cookie deletion happens in the next render pass via the Javascript bridge.
         self._st.session_state[self.CLEAR_FLAG_KEY] = True
+        self._st.session_state[self.BLOCK_RESTORE_KEY] = True
+
+    def restore_blocked(self) -> bool:
+        return bool(self._st.session_state.get(self.BLOCK_RESTORE_KEY, False))
+
+    def unblock_restore(self) -> None:
+        self._st.session_state.pop(self.BLOCK_RESTORE_KEY, None)
 
     def clear_pending(self) -> bool:
         return bool(self._st.session_state.get(self.CLEAR_FLAG_KEY, False))
