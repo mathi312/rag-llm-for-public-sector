@@ -79,7 +79,7 @@ class DummyRecord:
 
 @pytest.fixture(autouse=True)
 def browser_auth_stub(monkeypatch):
-    browser_auth = {"value": None, "clear_marked": False}
+    browser_auth = {"value": None, "clear_marked": False, "restore_blocked": False}
 
     class FakeBrowserSession:
         def __init__(self, streamlit_module):
@@ -90,12 +90,19 @@ def browser_auth_stub(monkeypatch):
 
         def mark_for_clear(self):
             browser_auth["clear_marked"] = True
+            browser_auth["restore_blocked"] = True
 
         def clear_pending(self):
             return browser_auth["clear_marked"]
 
         def flush_clear(self):
             browser_auth["clear_marked"] = False
+
+        def restore_blocked(self):
+            return browser_auth["restore_blocked"]
+
+        def unblock_restore(self):
+            browser_auth["restore_blocked"] = False
 
         def sync_auth(self, auth_data):
             browser_auth["synced"] = auth_data
@@ -198,6 +205,37 @@ def test_logout_user(mock_client, stub_st, browser_auth_stub):
     assert "user" not in stub_st.session_state
     assert mock_client.auth_store.cleared is True # Auth store clear method should be called
     assert browser_auth_stub["clear_marked"] is True
+    assert browser_auth_stub["restore_blocked"] is True
+
+
+def test_restore_session_ignores_cookie_while_logout_clear_is_pending(
+    mock_client, stub_st, browser_auth_stub
+):
+    """A stale auth cookie must not re-authenticate the user right after logout."""
+    browser_auth_stub["restore_blocked"] = True
+    browser_auth_stub["value"] = {
+        "token": "t123",
+        "model": {"id": "1", "email": "user@example.org", "name": "Max", "admin": False},
+    }
+
+    pb.restore_session()
+
+    assert "pb_auth" not in stub_st.session_state
+    assert "user" not in stub_st.session_state
+    assert browser_auth_stub["clear_marked"] is True
+    assert browser_auth_stub["restore_blocked"] is True
+
+
+def test_restore_session_unblocks_cookie_restore_after_cookie_is_gone(
+    mock_client, stub_st, browser_auth_stub
+):
+    """Once the browser cookie is gone, normal session restore may resume."""
+    browser_auth_stub["restore_blocked"] = True
+    browser_auth_stub["value"] = None
+
+    pb.restore_session()
+
+    assert browser_auth_stub["restore_blocked"] is False
 
 
 def test_sync_browser_auth_renders_component(monkeypatch):

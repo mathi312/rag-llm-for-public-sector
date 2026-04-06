@@ -72,6 +72,16 @@ class PocketBaseAuthController:
 
         # After a browser reload, rehydrate the Streamlit session from the cookie.
         if auth_data is None:
+            if self._browser_session.restore_blocked():
+                cookie_auth = self._browser_session.load_auth()
+                if cookie_auth is None:
+                    self._browser_session.unblock_restore()
+                else:
+                    self._browser_session.mark_for_clear()
+                self._st.session_state.pop("pb_auth", None)
+                self._st.session_state.pop("user", None)
+                return
+
             auth_data = self._browser_session.load_auth()
             if auth_data is not None:
                 self._st.session_state["pb_auth"] = auth_data
