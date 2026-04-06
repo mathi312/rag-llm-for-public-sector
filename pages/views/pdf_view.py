@@ -1,6 +1,6 @@
 import streamlit as st
 from pathlib import Path
-from extensions.pocketbase import is_authenticated
+from extensions.pocketbase import is_authenticated, user_is_admin
 
 st.set_page_config(page_title="PDF Detail View", layout="wide")
 
@@ -18,6 +18,11 @@ if not name:
 if not is_authenticated():
     st.error("Authentication required.")
     st.switch_page("pages/authentication/login.py")
+    st.stop()
+
+if not user_is_admin():
+    st.error("Access denied. Admins only.")
+    st.switch_page("pages/ragllm.py")
     st.stop()
 
 st.header("PDF Detail View")

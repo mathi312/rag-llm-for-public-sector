@@ -1,6 +1,6 @@
 import streamlit as st
 from extensions.app_session import initialize_app_session
-from extensions.pocketbase import is_authenticated, logout_user, restore_session
+from extensions.pocketbase import is_authenticated, restore_session, user_is_admin
 from extensions.pocketbase.pocketbase_browser_session import PocketBaseBrowserSession
 
 # Initialize authentication session
@@ -25,7 +25,7 @@ if not is_authenticated():
         st.Page("pages/authentication/login.py", title="Login"),
     ]
 
-if is_authenticated():
+if is_authenticated() and user_is_admin():
     pages["Logs"] = [st.Page("pages/log/loggerview.py", title="Logs")]
     pages["Documentmanager"] = [
         st.Page("pages/management/documents.py", title="Document Manager"),

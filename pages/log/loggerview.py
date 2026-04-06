@@ -1,8 +1,19 @@
 import streamlit as st
 from pathlib import Path
 from config import LOG_DIR
+from extensions.pocketbase import is_authenticated, user_is_admin
 
 st.set_page_config(page_title="Logs", layout="wide")
+
+if not is_authenticated():
+    st.error("Authentication required.")
+    st.switch_page("pages/authentication/login.py")
+    st.stop()
+
+if not user_is_admin():
+    st.error("Access denied. Admins only.")
+    st.switch_page("pages/ragllm.py")
+    st.stop()
 
 st.title("Logdateien")
 
