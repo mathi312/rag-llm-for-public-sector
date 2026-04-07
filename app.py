@@ -1,7 +1,7 @@
 import streamlit as st
-from extensions.app_session import initialize_app_session
-from extensions.pocketbase import is_authenticated, restore_session, user_is_admin
-from extensions.pocketbase.pocketbase_browser_session import PocketBaseBrowserSession
+from application.app_session import initialize_app_session
+from application.pocketbase import is_authenticated, restore_session, user_is_admin
+from application.pocketbase.pocketbase_browser_session import PocketBaseBrowserSession
 
 # Initialize authentication session
 browser_session = PocketBaseBrowserSession(st)
@@ -18,18 +18,18 @@ else:
 # Define the pages
 pages: dict[str, list[st.Page]] = {}
 
-pages["RAG-LLM"] = [st.Page("pages/ragllm.py", title="RAG-LLM")]
+pages["RAG-LLM"] = [st.Page("presentation/ragllm.py", title="RAG-LLM")]
 
 if not is_authenticated():
     pages["User"] = [
-        st.Page("pages/authentication/login.py", title="Login"),
+        st.Page("presentation/authentication/login.py", title="Login"),
     ]
 
 if is_authenticated() and user_is_admin():
-    pages["Logs"] = [st.Page("pages/log/loggerview.py", title="Logs")]
+    pages["Logs"] = [st.Page("presentation/log/loggerview.py", title="Logs")]
     pages["Documentmanager"] = [
-        st.Page("pages/management/documents.py", title="Document Manager"),
-        st.Page("pages/views/pdf_view.py", title="PDF View"),
+        st.Page("presentation/management/documents.py", title="Document Manager"),
+        st.Page("presentation/views/pdf_view.py", title="PDF View"),
     ]
 
 page_navigation = st.navigation(pages, position="top")
