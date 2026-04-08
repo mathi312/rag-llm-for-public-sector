@@ -1,7 +1,7 @@
 import streamlit as st
 from pathlib import Path
 from config import LOG_DIR
-from extensions.pocketbase import is_authenticated, user_is_admin
+from application.pocketbase import is_authenticated, user_is_admin
 
 st.set_page_config(page_title="Logs", layout="wide")
 
