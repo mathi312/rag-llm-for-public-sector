@@ -8,8 +8,8 @@ import re
 import streamlit as st
 from pathlib import Path
 
-from application.loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
-from application.indexing import load_index, build_index_from_documents
+from application.loaders.loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
+from application.indexing.indexing import load_index, build_index_from_documents
 from application.chat import create_rag_chain, answer_question
 
 import time
@@ -18,6 +18,7 @@ from application.app_session import initialize_app_session, reset_chat_context
 from application.report_generator.report_generator import print_report, send_report_via_email
 from domain.report.report import Report
 from domain.report.excpetions import *
+from domain.indexing.excpetions import IndexLoadError, IndexDoesntExistError
 from application.idprovider import *
 from application.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
 from application.predefined_questions import get_questions, update_times_asked_of_question
@@ -322,10 +323,17 @@ except Exception as e:
 
 # Auto-load existing index
 if st.session_state.vector_store is None:
-    vs = load_index(embeddings)
-    if vs:
-        st.session_state.vector_store = vs
-        st.sidebar.success("Loaded existing index.")
+    try:
+        vs = load_index(embeddings)
+        if vs:
+            st.session_state.vector_store = vs
+            st.sidebar.success("Loaded existing index.")
+    except IndexDoesntExistError as e:
+        st.warning(e)
+    except IndexLoadError as e:
+        st.error(e)
+    except Exception as e:
+        st.error("An error occured while loading the index. Please try again later.")
 
 
 # --- Dialog to display the source ---

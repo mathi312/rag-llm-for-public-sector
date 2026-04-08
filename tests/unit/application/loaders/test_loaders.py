@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-from application.loaders import *
+from application.loaders.loaders import *
 
 from langchain_core.documents import Document
 
@@ -16,9 +16,9 @@ class FakeUploadedFile:
         return self._content
 
 
-@patch("application.loaders.os.remove")
-@patch("application.loaders.PyPDFLoader")
-@patch("application.loaders.Docx2txtLoader")
+@patch("application.loaders.loaders.os.remove")
+@patch("application.loaders.loaders.PyPDFLoader")
+@patch("application.loaders.loaders.Docx2txtLoader")
 def test_load_files_to_documents_pdf_and_docx(
     mock_docx_loader,
     mock_pdf_loader,
@@ -51,7 +51,7 @@ def test_load_files_to_documents_unsupported_file():
     assert documents == []
 
 
-@patch("application.loaders.WebBaseLoader")
+@patch("application.loaders.loaders.WebBaseLoader")
 def test_load_urls_as_documents_success(mock_loader):
     doc = MagicMock()
     doc.page_content = "Hello\n\n\nWorld   ."
@@ -64,7 +64,7 @@ def test_load_urls_as_documents_success(mock_loader):
     assert documents[0].page_content == "Hello\nWorld."
 
 
-@patch("application.loaders.WebBaseLoader")
+@patch("application.loaders.loaders.WebBaseLoader")
 def test_load_urls_as_documents_error(mock_loader):
     mock_loader.side_effect = Exception("Load failed")
 
@@ -72,7 +72,7 @@ def test_load_urls_as_documents_error(mock_loader):
 
     assert documents == []
 
-@patch("application.loaders.RecursiveCharacterTextSplitter")
+@patch("application.loaders.loaders.RecursiveCharacterTextSplitter")
 def test_split_documents(mock_splitter):
     splitter_instance = MagicMock()
     splitter_instance.split_documents.return_value = ["chunk1", "chunk2"]
@@ -109,8 +109,8 @@ class TestLoadDirectoryDocuments:
 
         assert documents == []
 
-    @patch("application.loaders.PyPDFLoader")
-    @patch("application.loaders.Docx2txtLoader")
+    @patch("application.loaders.loaders.PyPDFLoader")
+    @patch("application.loaders.loaders.Docx2txtLoader")
     def test_load_directory_documents_success(self, mock_docx, mock_pdf, tmp_path):
         pdf_file = tmp_path / "a.pdf"
         docx_file = tmp_path / "b.docx"
@@ -145,7 +145,7 @@ class TestLoadDirectoryDocuments:
         fake_doc = make_doc()
 
         with patch("application.documents.documentupload.list_documents", return_value=[]), \
-             patch("application.loaders.PyPDFLoader") as MockLoader:
+             patch("application.loaders.loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
             result = load_directory_documents(tmp_path)
@@ -158,7 +158,7 @@ class TestLoadDirectoryDocuments:
         fake_doc = make_doc()
 
         with patch("application.documents.documentupload.list_documents", return_value=[]), \
-             patch("application.loaders.Docx2txtLoader") as MockLoader:
+             patch("application.loaders.loaders.Docx2txtLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
             result = load_directory_documents(tmp_path)
@@ -176,8 +176,8 @@ class TestLoadDirectoryDocuments:
         docx_doc = make_doc("from docx")
 
         with patch("application.documents.documentupload.list_documents", return_value=[]), \
-            patch("application.loaders.PyPDFLoader") as MockPDF, \
-            patch("application.loaders.Docx2txtLoader") as MockDOCX:
+            patch("application.loaders.loaders.PyPDFLoader") as MockPDF, \
+            patch("application.loaders.loaders.Docx2txtLoader") as MockDOCX:
 
             MockPDF.return_value.load.return_value = [pdf_doc]
             MockDOCX.return_value.load.return_value = [docx_doc]
@@ -200,7 +200,7 @@ class TestLoadDirectoryDocuments:
         (tmp_path / "doc.pdf").write_bytes(b"%PDF fake")
 
         with patch("application.documents.documentupload.list_documents", return_value=[]), \
-             patch("application.loaders.PyPDFLoader", side_effect=Exception("init error")):
+             patch("application.loaders.loaders.PyPDFLoader", side_effect=Exception("init error")):
 
             result = load_directory_documents(tmp_path)
 
@@ -221,8 +221,8 @@ class TestNeededIdMetadata:
         f = tmp_path / filename
         f.write_bytes(b"%PDF fake" if filename.endswith(".pdf") else b"PK fake")
         fake_doc = make_doc()
-        loader_patch = "application.loaders.PyPDFLoader" if filename.endswith(".pdf") \
-                       else "application.loaders.Docx2txtLoader"
+        loader_patch = "application.loaders.loaders.PyPDFLoader" if filename.endswith(".pdf") \
+                       else "application.loaders.loaders.Docx2txtLoader"
 
         with patch("application.documents.documentupload.list_documents", return_value=records), \
              patch(loader_patch) as MockLoader:
@@ -270,7 +270,7 @@ class TestListDocumentsFallback:
         fake_doc = make_doc()
 
         with patch("application.documents.documentupload.list_documents", side_effect=RuntimeError("DB down")), \
-             patch("application.loaders.PyPDFLoader") as MockLoader:
+             patch("application.loaders.loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
             result = load_directory_documents(tmp_path)
@@ -283,7 +283,7 @@ class TestListDocumentsFallback:
         fake_doc = make_doc()
 
         with patch("application.documents.documentupload.list_documents", side_effect=Exception("any error")), \
-             patch("application.loaders.PyPDFLoader") as MockLoader:
+             patch("application.loaders.loaders.PyPDFLoader") as MockLoader:
 
             MockLoader.return_value.load.return_value = [fake_doc]
             result = load_directory_documents(tmp_path)
