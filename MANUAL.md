@@ -198,6 +198,45 @@ Wer nur die Minimalversion braucht, kommt mit diesen Schritten ans Ziel:
 6. Falls nötig: `docker exec -it pocketbase /pb/pocketbase superuser create <mail> <passwort>`
 7. `http://localhost:8501` im Browser öffnen.
 
+
 # Verwendung der Applikation
 
-## 
+## 1. Pocketbase
+
+### 1.1. Accounts verwalten
+
+Sobald ein Superuser für Pocketbase erstellt wurde, ist es möglich in Pocketbase Benutzerkonten für die RAG-LLM Anwendung anzulegen. In der Benutzerverwaltung können die Benutzer ebenfalls bearbeitet und gelöscht werden.
+
+## 2. RAG-LLM Anwendung
+
+### 2.1. Sidenav
+
+Die Sidenav stellt Informationen und Funktionen bezüglich des Chatbots zu Verfügung. Hierbei wird zwischen Allgemein und Administration unterschieden.
+
+#### 2.1.1. Allgemein
+
+Im allgemeinen Bereich den eigenen Loginstatus einzusehen, einen Ausweis hochzuladen und einen Report zu generieren.
+
+#### 2.1.2. Administration
+
+Im Administrationsbereich ist es möglich das LLM-Modell zu ändern. Außerdem sieht man Informationen zu den indexierten und existierenden Dokumenten. Hier kann auch der Inhalt einer Webseite indexiert werden. Zudem kann der Index neu gebaut werden.
+
+### 2.2. Hauptansicht
+
+In der Hauptansicht sieht man einen chatähnlichen Aufbau. Über das Inputfeld auf der unteren Seite können Fragen an den digitalen Assistenten gestellt werden. Über den Button `generate questions` können neue vorgefertigte Fragen generiert werden. Über den Button `new chat` wird ein neuer Chat bereitgestellt.
+
+### 2.3. Authentifizierung
+
+Auf der oberen Leiste kann man sich unter `user -> login` in der Anwendung anmelden. Hierzu verwendet man die in Pocketbase angelegten Benutzerdaten.
+
+### 2.4. Adminseiten
+
+Als Administrator hat man Zugang zu Adminseiten.
+
+#### 2.4.1. Dokumentenmanager
+
+Im Dokumentenmanager können Dokumente hochgeladen, bearbeitet, angesehen und gelöscht werden. Für ein Dokument kann angegeben werden, ob ein Ausweis für dieses hochgeladen werden soll. Wenn ein Dokument bearbeitet wird, kann es durch ein neueres Dokument ausgetauscht werden. Hierbei wird das Dokument auf Unterschiede geprüft. Wenn das Dokument identisch ist, kann es nicht aktualisiert werden. In der Dokumentenauflistung können vorgefertigte Fragen aus dem Kontext generiert werden.
+
+#### 2.4.2. Logmanager
+
+Im Logmanager können tägliche Logs eingesehen werden. Diese können auch heruntergeladen werden.
