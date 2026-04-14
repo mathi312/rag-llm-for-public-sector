@@ -4,63 +4,29 @@ This module provides the web interface for uploading documents, building
 or loading vector indexes, and interacting with the document corpus via
 natural language queries.
 """
-import re
-import streamlit as st
+import time
 from pathlib import Path
 
-from application.loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
-from application.indexing import load_index, build_index_from_documents
+import streamlit as st
+
+from application.loaders.loaders import load_files_to_documents, load_directory_documents, load_urls_as_documents, split_documents
+from application.indexing.indexing import load_index, build_index_from_documents
 from application.chat import create_rag_chain, answer_question
+from application.app_session import initialize_app_session
+from application.report_generator.report_generator import print_report
+from application.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
+from application.models.models import get_embeddings, get_llm
 
-import time
-
-from application.app_session import initialize_app_session, reset_chat_context
-from application.report_generator.report_generator import print_report, send_report_via_email
 from domain.report.report import Report
 from domain.report.excpetions import *
-from application.idprovider import *
-from application.pocketbase import get_user_from_auth_store, is_authenticated, user_is_admin
-from application.predefined_questions import get_questions, update_times_asked_of_question
-from application.models.models import get_embeddings, get_llm
+from domain.indexing.excpetions import IndexLoadError, IndexDoesntExistError
+
 from presentation.components.user_menu import user_menu
-
-
-if "example_questions" not in st.session_state:
-    st.session_state.example_questions = get_questions()
-
-def refresh_questions():
-    questions = get_questions(random=True)
-    if questions:
-        st.session_state.example_questions = questions
-    else:
-        st.session_state.questions_error = True
-
-
-def render_new_chat():
-    if st.button("🆕 New chat", use_container_width=True):
-        start_new_chat()
-        st.rerun()
-
-
-def render_suggestions():
-    st.button("🔄 New Questions", on_click=refresh_questions)
-
-    if st.session_state.pop("questions_error", False):
-        st.error("Could not refresh questions. Please try again later.")
-
-    if not st.session_state.get("example_questions"):
-        st.info("No questions available right now. Please refresh or try again later.")
-        return
-
-    st.markdown("#### How can I help you today?")
-    cols = st.columns(3)
-
-    for i, q in enumerate(st.session_state.example_questions):
-        with cols[i % 3]:
-            if st.button(q.question, key=f"suggest-{q.id}"):
-                st.session_state["prefill"] = q.question
-                st.session_state["auto_send"] = True
-                update_times_asked_of_question(q.id)
+from presentation.components.predefined_questions import render_suggestions
+from presentation.components.select_id_type_dialog import handle_id_upload, select_id_type_dialog
+from presentation.components.new_chat import render_new_chat
+from presentation.components.email_dialog import email_dialog
+from presentation.components.show_source_details import show_source_details
 
 
 # Define the static data directory (mounted via Docker)
@@ -92,47 +58,6 @@ def add_url():
         st.session_state.urls.append(url)
     st.session_state.url_input = ""
 
-
-def start_new_chat():
-    """Start a fresh conversation without rebuilding the current index."""
-    reset_chat_context(st)
-
-# helper to handle the upload of an id
-def handle_id_upload(id_image, id_type: IdType | None = None):
-    # rewind to start of file, needed when trying to process the image a second time
-    id_image.seek(0)
-
-    extracted_data = process_id_document(
-        id_image.read(),
-        id_type=id_type
-    )
-    st.session_state["id_uploaded"] = True
-
-    st.session_state["id_document"] = {
-        "type": extracted_data.get("id_type").value,
-        "data": extracted_data,
-    }
-
-# Dialog for manually selecting id type after ocr failed to get the id type from the uploaded id
-@st.dialog("Manually select your id type")
-def select_id_type_dialog(id_image, exception: str):
-    st.error(exception)
-    st.write("Please manually select the ID type you provided.")
-
-    selected_id_type = st.selectbox(
-        "Select Citizen ID",
-        options=list(IdType),
-        index=0,
-        format_func=lambda x: x.value
-    )
-
-    if st.button("Process ID Document Again"):
-        try:
-            handle_id_upload(id_image, selected_id_type)
-
-            st.success("ID Document successfully processed!")
-        except Exception as exc:
-            st.error(f"OCR processing failed: {exc}")
 
 # --- SIDEBAR UI ---
 with st.sidebar:
@@ -276,26 +201,6 @@ with st.sidebar:
         print_report_btn = st.button("Print Report")
 
 
-# Dialog for entering a email address
-@st.dialog("Enter your email address")
-def email_dialog(exception: str):
-    st.error(exception)
-    st.write("Please provide your email to receive the report.")
-    email = st.text_input("Email")
-
-    if st.button("Send email"):
-        email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
-        if not re.match(email_pattern, email):
-            st.warning("Invalid email address")
-        else:
-            try:
-                send_report_via_email(st.session_state.report, email, st.session_state.user)
-                st.success("Email sent successfully.")
-            except (EmptyReportError, EmptyEmailAddressError) as e:
-                st.warning(str(e))
-            except Exception as e:
-                st.exception(e)
-
 if print_report_btn:
     try:
         print_report(st.session_state.report, st.session_state.user)
@@ -322,20 +227,17 @@ except Exception as e:
 
 # Auto-load existing index
 if st.session_state.vector_store is None:
-    vs = load_index(embeddings)
-    if vs:
-        st.session_state.vector_store = vs
-        st.sidebar.success("Loaded existing index.")
-
-
-# --- Dialog to display the source ---
-@st.dialog("Source Content")
-def show_source_details(content, title):
-    st.write(f"### {title}")
-    st.write("---")
-    st.write(content)
-    if st.button("Close"):
-        st.rerun()
+    try:
+        vs = load_index(embeddings)
+        if vs:
+            st.session_state.vector_store = vs
+            st.sidebar.success("Loaded existing index.")
+    except IndexDoesntExistError as e:
+        st.warning(e)
+    except IndexLoadError as e:
+        st.error(e)
+    except Exception as e:
+        st.error("An error occured while loading the index. Please try again later.")
 
 
 # --- Check for active source ---

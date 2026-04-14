@@ -5,14 +5,15 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
-from application.indexing import load_index, build_index_from_documents
+from application.indexing.indexing import load_index, build_index_from_documents
+from domain.indexing.excpetions import IndexDoesntExistError, IndexLoadError
 
 
 class TestLoadIndex:
     """Tests for loading persisted FAISS indexes"""
     
-    @patch("application.indexing.FAISS.load_local")
-    @patch("application.indexing.INDEX_DIR")
+    @patch("application.indexing.indexing.FAISS.load_local")
+    @patch("application.indexing.indexing.INDEX_DIR")
     def test_load_index_success(self, mock_index_dir, mock_load_local):
         """Test successful loading of an existing index"""
         mock_index_dir.exists.return_value = True
@@ -30,29 +31,25 @@ class TestLoadIndex:
             allow_dangerous_deserialization=True
         )
     
-    @patch("application.indexing.INDEX_DIR")
+    @patch("application.indexing.indexing.INDEX_DIR")
     def test_load_index_directory_not_exists(self, mock_index_dir):
         """Test when index directory doesn't exist"""
         mock_index_dir.exists.return_value = False
         mock_embeddings = MagicMock()
-        
-        result = load_index(mock_embeddings)
-        
-        assert result is None
-        mock_index_dir.exists.assert_called_once()
+
+        with pytest.raises(IndexDoesntExistError):
+            load_index(mock_embeddings)
     
-    @patch("application.indexing.FAISS.load_local")
-    @patch("application.indexing.INDEX_DIR")
+    @patch("application.indexing.indexing.FAISS.load_local")
+    @patch("application.indexing.indexing.INDEX_DIR")
     def test_load_index_exception(self, mock_index_dir, mock_load_local):
         """Test error handling when loading fails"""
         mock_index_dir.exists.return_value = True
         mock_load_local.side_effect = Exception("Load failed")
         mock_embeddings = MagicMock()
-        
-        result = load_index(mock_embeddings)
-        
-        assert result is None
-        mock_load_local.assert_called_once()
+
+        with pytest.raises(IndexLoadError):
+            load_index(mock_embeddings)
 
 
 class TestBuildIndexFromDocuments:
@@ -73,7 +70,7 @@ class TestBuildIndexFromDocuments:
 
         faiss_cls, store = self.setup_vector_store_mock()
 
-        with patch("application.indexing.FAISS", faiss_cls):
+        with patch("application.indexing.indexing.FAISS", faiss_cls):
             result = build_index_from_documents(docs, embeddings, batch_size=32)
 
         assert result is store
@@ -91,7 +88,7 @@ class TestBuildIndexFromDocuments:
 
         faiss_cls, store = self.setup_vector_store_mock()
 
-        with patch("application.indexing.FAISS", faiss_cls):
+        with patch("application.indexing.indexing.FAISS", faiss_cls):
             build_index_from_documents(docs, embeddings, batch_size=4)
 
         faiss_cls.from_documents.assert_called_once_with(docs[:4], embeddings)
@@ -102,8 +99,8 @@ class TestBuildIndexFromDocuments:
         docs = self.make_docs(3)
         faiss_cls, store = self.setup_vector_store_mock()
 
-        with patch("application.indexing.FAISS", faiss_cls), \
-            patch("application.indexing.INDEX_DIR", self.INDEX_DIR_PATH):
+        with patch("application.indexing.indexing.FAISS", faiss_cls), \
+            patch("application.indexing.indexing.INDEX_DIR", self.INDEX_DIR_PATH):
             build_index_from_documents(docs, embeddings, batch_size=32)
 
         store.save_local.assert_called_once_with(self.INDEX_DIR_PATH.as_posix())
@@ -112,7 +109,7 @@ class TestBuildIndexFromDocuments:
         embeddings = MagicMock(name="Embeddings")
         faiss_cls, store = self.setup_vector_store_mock()
 
-        with patch("application.indexing.FAISS", faiss_cls):
+        with patch("application.indexing.indexing.FAISS", faiss_cls):
             build_index_from_documents([], embeddings, batch_size=32)
 
         store.save_local.assert_not_called()

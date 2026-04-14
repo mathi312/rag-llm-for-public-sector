@@ -22,6 +22,9 @@ from langchain_core.documents import Document
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP
 
+from application.logger import Logger
+
+logger = Logger()
 
 def load_files_to_documents(uploaded_files) -> List[Document]:
     """Convert uploaded Streamlit file objects into LangChain Documents.
@@ -77,7 +80,7 @@ def load_urls_as_documents(urls) -> List[Document]:
 
             documents.extend(docs)
         except Exception as e:
-            print(f"Error while loading {url}: {e}")
+            logger.log_error(f"Error while loading {url}: {str(e)}")
             continue
 
     return documents
@@ -117,7 +120,7 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
     except Exception:
         needed_id_map = {}
 
-    print(f"Scanning {data_dir} for documents...")
+    logger.log_info(f"Scanning {data_dir} for documents...")
     for file_path in data_dir.iterdir():
         if not file_path.is_file():
             continue
@@ -131,7 +134,7 @@ def load_directory_documents(data_dir: Path) -> List[Document]:
             else:
                 continue
         except Exception as e:
-            print(f"Error loading {file_path}: {e}")
+            logger.log_info(f"Error loading {file_path}: {str(e)}")
             continue
         
         # Load the document and attach metadata about source and needed IDs.
