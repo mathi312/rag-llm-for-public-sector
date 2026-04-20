@@ -28,6 +28,7 @@
 !docker-compose.prod.yml
 !docker-compose.dev.yml
 !README.md
+!MANUAL.md
 !.gitignore
 !.dockerignore
 !.coveragerc
