@@ -42,6 +42,9 @@
 
 # --- 5. Whitelist CI/CD Pipeline ---
 !.gitlab-ci.yml
+!.pylintrc
+!.github/
+!.github/**
 
 # --- 6. Explicitly Ignore Generated Artifacts ---
 # PocketBase runtime DB/files (local state only)
